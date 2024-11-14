@@ -4,7 +4,7 @@
 #include <cmath>
 
 #include "linalg/linalg.h"
-#include "sphere.h"
+#include "objs/sphere.h"
 #include "img/handler.h"
 
 #define WIDTH 3840
