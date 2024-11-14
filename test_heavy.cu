@@ -65,9 +65,10 @@ __global__ void renderKernel(unsigned char* framebuffer, Sphere* spheres, int nu
     Vec3 rayOrigin(0, 0, 0);
     Vec3 colCum(0, 0, 0);
 
+    double spp = static_cast<double>(SAMPLES_PER_PIXEL);
     for (int sample = 0; sample < SAMPLES_PER_PIXEL; sample++) {
-        double u = (x + (sample / static_cast<double>(SAMPLES_PER_PIXEL)) - WIDTH / 2.0) / WIDTH;
-        double v = (y + (sample / static_cast<double>(SAMPLES_PER_PIXEL)) - HEIGHT / 2.0) / HEIGHT;
+        double u = (x + (sample / spp) - WIDTH / 2.0) / WIDTH;
+        double v = (y + (sample / spp) - HEIGHT / 2.0) / HEIGHT;
         Vec3 rayDir(u, v, 1.0);
         rayDir = rayDir.normalize();
 
