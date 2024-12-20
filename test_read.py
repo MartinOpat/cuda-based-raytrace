@@ -22,25 +22,12 @@ print("Mean of U:", U_mean)
 
 print("Sum of U:", U_sum)
 
-masked_count = np.ma.count_masked(U)
-print("Number of masked values in U:", masked_count)
-
-nan_count = np.isnan(U).sum()
-print("Number of NaN values in U:", nan_count)
-
-print("Calculating mean manually (takes a bit cause python is slowww)")
-
-count = 0
-valsum = 0
-for val in U.flat:
+sumval = 0
+row = U[0,0,100]
+for val in row:
     if not np.ma.is_masked(val):
-        # print(val)
-        valsum += val
-        count += 1
-
-print(f"{valsum=} {valsum/count=} {count=}")
-
-print(f"The problem is this: why does {valsum/count=} not equal {U_mean=}")
+        sumval += val
+print(f"Why does {np.sum(row)=} not equal {sumval=} ?!")
 
 # Close the NetCDF file
 ncfile.close()
