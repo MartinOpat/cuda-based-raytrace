@@ -13,6 +13,7 @@ __device__ float getVal(
     const size_t &latInd,
     const size_t &levInd
 ) {
+    // TODO: Actaully implement function
     return d.valArrays[0][timeInd]; 
 }
 
