@@ -24,31 +24,37 @@ std::vector<float> readData(std::string path, std::string variableName) {
     return vec;
 }
 
-struct cudaArray* loadDataToDevice(std::string path, std::string variableName) {
+std::pair<float*, size_t> loadDataToDevice(std::string path, std::string variableName) {
     netCDF::NcFile data(path, netCDF::NcFile::read);
 
     multimap<string, NcVar> vars = data.getVars();
 
     NcVar var = vars.find(variableName)->second;   
 
-    struct cudaChannelFormatDesc arrayType = {
-        .x = 32,
-        .y = 0,
-        .z = 0,
-        .w = 0,
-        .f = cudaChannelFormatKindFloat
-    }; // Float-32
-    
-    struct cudaExtent extent = {
-        .width = var.getDim(3).getSize(), // longitude
-        .height = var.getDim(2).getSize(), // latitude
-        .depth = var.getDim(1).getSize(), // level
-    };
+    int length = 1;
+    for (NcDim dim: var.getDims()) {
+        length *= dim.getSize();
+    }
 
-    struct cudaArray *array;
+    // Store NetCDF variable in pinned memory on host
+    float *h_array;
 
-    cudaError_t error = cudaMalloc3DArray(&array, &arrayType, extent, 0);
-    cout << "cuda error: " << error << "\n";
+    cudaMallocHost(&h_array, sizeof(float)*length);
 
-    return array;
+    var.getVar(h_array);
+
+    // Copy data to device
+    float *d_array;
+
+    cudaError_t status = cudaMalloc(&d_array, sizeof(float)*length);
+    if (status != cudaSuccess)
+        cout << "Error allocating memory: " << status << "\n";
+
+    cudaMemcpyAsync(d_array, h_array, sizeof(float)*length, cudaMemcpyHostToDevice);
+
+    cudaDeviceSynchronize(); // Heavy hammer synchronisation // TODO: Use streams
+
+    cudaFreeHost(h_array);
+
+    return std::pair(d_array, length);
 }
