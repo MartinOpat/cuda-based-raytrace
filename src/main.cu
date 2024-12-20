@@ -7,16 +7,22 @@
 
 int main() {
     std::string path = "data/MERRA2_400.inst6_3d_ana_Np.20120101.nc4";
-    std::string variable = "U";
+    std::string variable = "T";
     auto x = readData(path, variable);
 
     // Print some values from the file to see that it worked
-    int num = 0;
+    float sum = 0;
+    int n = 0;
+    int skipped = 0;
     for(int i = 0; i < x.size(); i++) {
-        if (x[i] < 1E14) std::cout << x[i] << "\n";
-        if(num > 10000) break;
-        num++;
+        if (x[i] < 1E14) {
+            sum += x[i];
+            n++;
+        } else {
+            skipped++;
+        }
     }
+    std::cout << "Mean = " << sum/n << " and sum = " << sum << " using " << n << " values in computation and skipped " << skipped << " values.\n";
 
     return 0;
 }
