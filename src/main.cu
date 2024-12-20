@@ -3,14 +3,16 @@
 #include <cuda_runtime.h>
 #include <device_launch_parameters.h>
 #include <iostream>
+#include <iomanip> 
 #include <cmath>
+
 
 int main() {
     std::string path = "data/MERRA2_400.inst6_3d_ana_Np.20120101.nc4";
     std::string variable = "T";
     auto x = readData(path, variable);
 
-    // Print some values from the file to see that it worked
+    // Calculate the mean of the data to see if it works.
     float sum = 0;
     int n = 0;
     int skipped = 0;

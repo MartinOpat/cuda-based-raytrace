@@ -10,7 +10,7 @@ print(ncfile.variables.keys())
 
 U = ncfile.variables['T'][:] 
 
-# Check the shape of the variable (it should be 3D)
+# Check the shape of the variable 
 print("Shape of U:", U.shape)
 
 # Compute the mean of the variable across all axes (for all elements in U)
@@ -27,6 +27,20 @@ print("Number of masked values in U:", masked_count)
 
 nan_count = np.isnan(U).sum()
 print("Number of NaN values in U:", nan_count)
+
+print("Calculating mean manually (takes a bit cause python is slowww)")
+
+count = 0
+valsum = 0
+for val in U.flat:
+    if not np.ma.is_masked(val):
+        # print(val)
+        valsum += val
+        count += 1
+
+print(f"{valsum=} {valsum/count=} {count=}")
+
+print(f"The problem is this: why does {valsum/count=} not equal {U_mean=}")
 
 # Close the NetCDF file
 ncfile.close()
