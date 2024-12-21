@@ -21,8 +21,6 @@ path(path), variableName(variableName) {
     readAndAllocateAxis<double>(&fmd->levs, &fmd->depthSize, vars.find("lev")->second);
 }
 
-
-
 FieldData GPUBuffer::nextFieldData() {
     NcFile data(path, NcFile::read);
 
@@ -47,8 +45,6 @@ FieldData GPUBuffer::nextFieldData() {
     var.getVar(h_array);
 
     // Copy data to device
-    // float *d_array;
-
     cudaError_t status = cudaMalloc(&fd.valArrays[0], sizeof(float)*length);
     if (status != cudaSuccess)
         cout << "Error allocating memory: " << status << "\n";

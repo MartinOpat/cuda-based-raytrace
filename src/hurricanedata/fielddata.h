@@ -32,13 +32,13 @@ struct FieldData {
 
 using FieldData = FieldData;
 
-// __device__ float getVal(
-//     const FieldMetadata &md,
-//     const FieldData &d,
-//     const size_t &timeInd,
-//     const size_t &lonInd,
-//     const size_t &latInd,
-//     const size_t &levInd
-// );
+extern __device__ float getVal(
+    const FieldMetadata &md,
+    const FieldData &d,
+    const size_t &timeInd,
+    const size_t &levInd,
+    const size_t &latInd,
+    const size_t &lonInd
+);
 
 #endif //FIELDDATA_H

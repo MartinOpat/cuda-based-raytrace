@@ -23,11 +23,13 @@ print("Mean of U:", U_mean)
 print("Sum of U:", U_sum)
 
 sumval = 0
-row = U[0,0,100]
+row = U[2,20,100]
+n = 0
 for val in row:
     if not np.ma.is_masked(val):
+        n+=1
         sumval += val
-print(f"Why does {np.sum(row)=} not equal {sumval=} ?!")
+print(f"Why does {np.mean(row)=} not equal {sumval/n=} ?!")
 
 # Close the NetCDF file
 ncfile.close()

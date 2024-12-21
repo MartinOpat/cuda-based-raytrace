@@ -1,38 +1,25 @@
+#include "hurricanedata/fielddata.h"
 #include "hurricanedata/gpubuffer.h"
 
 #include <cuda_runtime.h>
 #include <device_launch_parameters.h>
 #include <iostream>
 #include <cmath>
+#include <iomanip> 
 
-__device__ float getVal(
-    const FieldMetadata &md,
-    const FieldData &d,
-    const size_t &timeInd,
-    const size_t &lonInd,
-    const size_t &latInd,
-    const size_t &levInd
-) {
-    // TODO: Actaully implement function
-    return d.valArrays[0][timeInd]; 
-}
 
 // Not parallel computation
-__global__ void computeMean(float *ans, size_t *masked_vals, const FieldMetadata &fmd, FieldData fd) {
+__global__ void computeMean(float *ans, const FieldMetadata &fmd, FieldData fd) {
     float sum = 0;
     size_t num_not_masked_values = 0;
-    size_t num_masked_values = 0;
-    for (int i = 0; i < fmd.widthSize*fmd.heightSize*fmd.depthSize*fd.timeSize; i++) {
-        double xi = getVal(fmd, fd, i, 0, 0, 0);
+    for (int i = 0; i < fmd.widthSize; i++) {
+        double xi = getVal(fmd, fd, 2, 20, 100, i);
         if (xi < 1E14) { /* If x is not missing value */
             num_not_masked_values++;
             sum += xi;
-        } else {
-            num_masked_values++;
         }
     }
     *ans = sum/num_not_masked_values;
-    *masked_vals = num_masked_values;
 }
 
 int main() {
@@ -45,17 +32,13 @@ int main() {
     float *ptr_mean;
     cudaMallocManaged(&ptr_mean, sizeof(float));
 
-    size_t *ptr_masked;
-    cudaMallocManaged(&ptr_masked, sizeof(size_t));
-
-    computeMean<<<1, 1>>>(ptr_mean, ptr_masked, *buffer.fmd, fd);
+    computeMean<<<1, 1>>>(ptr_mean, *buffer.fmd, fd);
 
     cudaDeviceSynchronize();
 
-    std::cout << "Mean = " << *ptr_mean << " values where " << *ptr_masked << " are masked values.\n";
+    std::cout << "Mean = " << std::fixed << std::setprecision(6) << *ptr_mean << "\n";
 
     cudaFree(fd.valArrays[0]);
     cudaFree(ptr_mean);
-    cudaFree(ptr_masked);
     return 0;
 }
