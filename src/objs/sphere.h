@@ -81,7 +81,7 @@ __host__ void generateVolume(float* volumeData, int volW, int volH, int volD) {
 }
 
 // Samples the voxel nearest to the given coordinates. TODO: Can be re-used in other places
-__device__ float sampleVolumeNearest(float* volumeData, int volW, int volH, int volD, int vx, int vy, int vz) {
+__device__ float sampleVolumeNearest(float* volumeData, const int volW, const int volH, const int volD, int vx, int vy, int vz) {
     if (vx < 0) vx = 0;
     if (vy < 0) vy = 0;
     if (vz < 0) vz = 0;
