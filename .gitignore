@@ -5,4 +5,7 @@
 build
 build/
 build/*
+*.o
 
+# Resulting images
+*.ppm
