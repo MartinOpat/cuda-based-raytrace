@@ -1,102 +1,224 @@
-#include <cuda_runtime.h>
-#include <device_launch_parameters.h>
 #include <iostream>
+#include <fstream>
 #include <cmath>
+#include <cuda_runtime.h>
 
-#include "linalg/linalg.h"
+#include "linalg/linalg.h" 
 #include "objs/sphere.h"
 #include "img/handler.h"
 
-#define WIDTH 3840
-#define HEIGHT 2160
-#define SAMPLES_PER_PIXEL 8
+// TODO: Eventually, export this into a better place (i.e., such that we do not have to recompile every time we change a parameter)
+static const int VOLUME_WIDTH  = 1024;
+static const int VOLUME_HEIGHT = 1024;
+static const int VOLUME_DEPTH  = 1024;
+
+static const int IMAGE_WIDTH   = 2560;
+static const int IMAGE_HEIGHT  = 1440;
+
+static const int SAMPLES_PER_PIXEL = 8;  // TODO: Right now uses simple variance, consider using something more advanced (e.g., some commonly-used noise map)
 
 
-__device__ Vec3 phongShading(const Vec3& point, const Vec3& normal, const Vec3& lightDir, const Vec3& viewDir, const Vec3& color) {
-    double ambientStrength = 0.1;
-    double diffuseStrength = 0.8;
+__constant__ int d_volumeWidth;
+__constant__ int d_volumeHeight;
+__constant__ int d_volumeDepth;
+
+static float* d_volume = nullptr;  // TODO: Adjust according to how data is loaded
+
+// ----------------------------------------------------------------------------------------------------
+__device__ Vec3 phongShading(const Vec3& normal, const Vec3& lightDir, const Vec3& viewDir, const Vec3& baseColor) {
+    double ambientStrength  = 0.3;
+    double diffuseStrength  = 0.8;
     double specularStrength = 0.5;
-    int shininess = 64;
+    int    shininess        = 32;
 
-    Vec3 ambient = color * ambientStrength;
-    double diff = max(normal.dot(lightDir), 0.0);
-    Vec3 diffuse = color * (diffuseStrength * diff);
+    Vec3 ambient = baseColor * ambientStrength;
+    double diff = fmax(normal.dot(lightDir), 0.0);
+    Vec3 diffuse = baseColor * (diffuseStrength * diff);
 
     Vec3 reflectDir = (normal * (2.0 * normal.dot(lightDir)) - lightDir).normalize();
-    double spec = pow(max(viewDir.dot(reflectDir), 0.0), shininess);
+    double spec = pow(fmax(viewDir.dot(reflectDir), 0.0), shininess);
     Vec3 specular = Vec3(1.0, 1.0, 1.0) * (specularStrength * spec);
 
     return ambient + diffuse + specular;
 }
 
-__global__ void renderKernel(unsigned char* framebuffer, Sphere* spheres, int numSpheres, Vec3 lightPos) {
-    int x = blockIdx.x * blockDim.x + threadIdx.x;
-    int y = blockIdx.y * blockDim.y + threadIdx.y;
-    if (x >= WIDTH || y >= HEIGHT) return;
+// Raycast + phong
+__global__ void raycastKernel(float*  volumeData, unsigned char* framebuffer, int imageWidth, int imageHeight, Vec3 cameraPos, Vec3 cameraDir, Vec3 cameraUp, float fov, float stepSize, Vec3 lightPos) {
+    int px = blockIdx.x * blockDim.x + threadIdx.x;
+    int py = blockIdx.y * blockDim.y + threadIdx.y;
+    if (px >= imageWidth || py >= imageHeight) return;
 
-    int pixelIndex = (y * WIDTH + x) * 3;
-    Vec3 rayOrigin(0, 0, 0);
-    Vec3 colCum(0, 0, 0);
+    float accumR = 0.0f;
+    float accumG = 0.0f;
+    float accumB = 0.0f;
 
-    double spp = static_cast<double>(SAMPLES_PER_PIXEL);
-    for (int sample = 0; sample < SAMPLES_PER_PIXEL; sample++) {
-        double u = (x + (sample / spp) - WIDTH / 2.0) / WIDTH;
-        double v = (y + (sample / spp) - HEIGHT / 2.0) / HEIGHT;
-        Vec3 rayDir(u, v, 1.0);
-        rayDir = rayDir.normalize();
+    // Multiple samples per pixel
+    for (int s = 0; s < SAMPLES_PER_PIXEL; s++) {
+        // Map to [-1, 1]
+        float u = ((px + 0.5f) / imageWidth ) * 2.0f - 1.0f;
+        float v = ((py + 0.5f) / imageHeight) * 2.0f - 1.0f;
 
-        for (int i = 0; i < numSpheres; ++i) {
-            double t;
-            if (spheres[i].intersect(rayOrigin, rayDir, t)) {
-                Vec3 hitPoint = rayOrigin + rayDir * t;
-                Vec3 normal = (hitPoint - spheres[i].center).normalize();
-                Vec3 lightDir = (lightPos - hitPoint).normalize();
-                Vec3 viewDir = -rayDir;
+        // TODO: Move this (and all similar transformation code) to its own separate file
+        float tanHalfFov = tanf(fov * 0.5f);
+        u *= tanHalfFov;
+        v *= tanHalfFov;
 
-                colCum = colCum + phongShading(hitPoint, normal, lightDir, viewDir, spheres[i].color);
+        // Find ray direction
+        Vec3 cameraRight = (cameraDir.cross(cameraUp)).normalize();
+        cameraUp = (cameraRight.cross(cameraDir)).normalize();
+        Vec3 rayDir = (cameraDir + cameraRight*u + cameraUp*v).normalize();
+
+        // Intersect (for simplicity just a 3D box from 0 to 1 in all dimensions) - TODO: Think about whether this is the best way to do this
+        float tNear = 0.f;   // TODO: These are also linear transforms, so move away
+        float tFar  = 1e6f;
+
+        auto intersectAxis = [&](float start, float dirVal) {
+            if (fabsf(dirVal) < 1e-10f) {  // TDDO: Add a constant - epsilon
+                if (start < 0.f || start > 1.f) {
+                    tNear = 1e9f;
+                    tFar  = -1e9f;
+                }
+            } else {
+                float t0 = (0.0f - start) / dirVal;  // TODO: 0.0 and 1.0 depend on the box size -> move to a constant
+                float t1 = (1.0f - start) / dirVal;
+                if (t0>t1) { 
+                    float tmp=t0; 
+                    t0=t1; 
+                    t1=tmp; 
+                }
+                if (t0>tNear) tNear = t0;
+                if (t1<tFar ) tFar  = t1;
             }
+        };
+
+        intersectAxis(cameraPos.x, rayDir.x);
+        intersectAxis(cameraPos.y, rayDir.y);
+        intersectAxis(cameraPos.z, rayDir.z);
+
+        if (tNear > tFar) continue;  // No intersectionn
+        if (tNear < 0.0f) tNear = 0.0f;
+
+        float colorR = 0.f, colorG = 0.f, colorB = 0.f;
+        float alphaAccum = 0.f;
+
+        float tCurrent = tNear;
+        while (tCurrent < tFar && alphaAccum < 0.99f) {
+            Vec3 pos = cameraPos + rayDir * tCurrent;
+
+            // Convert to volume indices
+            float fx = pos.x * (d_volumeWidth  - 1);
+            float fy = pos.y * (d_volumeHeight - 1);
+            float fz = pos.z * (d_volumeDepth  - 1);
+            int ix = (int)roundf(fx);
+            int iy = (int)roundf(fy);
+            int iz = (int)roundf(fz);
+
+            // Sample
+            float density = sampleVolumeNearest(volumeData, d_volumeWidth, d_volumeHeight, d_volumeDepth, ix, iy, iz);
+
+            // Basic transfer function. TODO: Move to a separate file, and then improve
+            float alphaSample = density * 0.05f;
+            Vec3 baseColor = Vec3(density, 0.1f*density, 1.f - density);
+
+            // If density ~ 0, skip shading
+            if (density > 0.001f) {
+                Vec3 grad = computeGradient(volumeData, d_volumeWidth, d_volumeHeight, d_volumeDepth, ix, iy, iz);
+                Vec3 normal = -grad.normalize();
+
+                Vec3 lightDir = (lightPos - pos).normalize();
+                Vec3 viewDir  = -rayDir.normalize();
+
+                // Apply Phong
+                Vec3 shadedColor = phongShading(normal, lightDir, viewDir, baseColor);
+
+                // Compose
+                colorR     += (1.0f - alphaAccum) * shadedColor.x * alphaSample;
+                colorG     += (1.0f - alphaAccum) * shadedColor.y * alphaSample;
+                colorB     += (1.0f - alphaAccum) * shadedColor.z * alphaSample;
+                alphaAccum += (1.0f - alphaAccum) * alphaSample;
+            }
+
+            tCurrent += stepSize;
         }
+
+        accumR += colorR;
+        accumG += colorG;
+        accumB += colorB;
     }
 
-    // Average color across all samples
-    Vec3 color = colCum * (1.0 / SAMPLES_PER_PIXEL);
+    // Average samples
+    accumR /= (float)SAMPLES_PER_PIXEL;
+    accumG /= (float)SAMPLES_PER_PIXEL;
+    accumB /= (float)SAMPLES_PER_PIXEL;
 
-    framebuffer[pixelIndex] = static_cast<unsigned char>(fmin(color.x, 1.0) * 255);
-    framebuffer[pixelIndex + 1] = static_cast<unsigned char>(fmin(color.y, 1.0) * 255);
-    framebuffer[pixelIndex + 2] = static_cast<unsigned char>(fmin(color.z, 1.0) * 255);
+    // Final colour
+    int fbIndex = (py * imageWidth + px) * 3;
+    framebuffer[fbIndex + 0] = (unsigned char)(fminf(accumR, 1.f) * 255);
+    framebuffer[fbIndex + 1] = (unsigned char)(fminf(accumG, 1.f) * 255);
+    framebuffer[fbIndex + 2] = (unsigned char)(fminf(accumB, 1.f) * 255);
 }
 
+int main(int argc, char** argv) {
+    // Generate debug volume data
+    float* hostVolume = new float[VOLUME_WIDTH * VOLUME_HEIGHT * VOLUME_DEPTH];
+    generateVolume(hostVolume, VOLUME_WIDTH, VOLUME_HEIGHT, VOLUME_DEPTH);
 
+    // Allocate + copy data to GPU
+    size_t volumeSize = sizeof(float) * VOLUME_WIDTH * VOLUME_HEIGHT * VOLUME_DEPTH;
+    cudaMalloc((void**)&d_volume, volumeSize);
+    cudaMemcpy(d_volume, hostVolume, volumeSize, cudaMemcpyHostToDevice);
 
-int main() {
-    Sphere spheres[] = {
-        { Vec3(0, 0, 5), 1.0, Vec3(1.0, 0.0, 0.0) },  // Red sphere
-        { Vec3(-2, 1, 7), 1.0, Vec3(0.0, 1.0, 0.0) }, // Green sphere
-        { Vec3(2, -1, 6), 1.0, Vec3(0.0, 0.0, 1.0) }  // Blue sphere
-    };
-    int numSpheres = sizeof(spheres) / sizeof(Sphere);
-    Vec3 lightPos(5, 5, 0);
+    int w = VOLUME_WIDTH, h = VOLUME_HEIGHT, d = VOLUME_DEPTH;
+    cudaMemcpyToSymbol(d_volumeWidth,  &w, sizeof(int));
+    cudaMemcpyToSymbol(d_volumeHeight, &h, sizeof(int));
+    cudaMemcpyToSymbol(d_volumeDepth,  &d, sizeof(int));
 
+    // Allocate framebuffer
     unsigned char* d_framebuffer;
-    unsigned char* h_framebuffer = new unsigned char[WIDTH * HEIGHT * 3];
-    Sphere* d_spheres;
-    cudaMalloc(&d_framebuffer, WIDTH * HEIGHT * 3);
-    cudaMalloc(&d_spheres, numSpheres * sizeof(Sphere));
-    cudaMemcpy(d_spheres, spheres, numSpheres * sizeof(Sphere), cudaMemcpyHostToDevice);
+    size_t fbSize = IMAGE_WIDTH * IMAGE_HEIGHT * 3 * sizeof(unsigned char);
+    cudaMalloc((void**)&d_framebuffer, fbSize);
+    cudaMemset(d_framebuffer, 0, fbSize);
 
-    dim3 threadsPerBlock(16, 16);
-    dim3 numBlocks((WIDTH + threadsPerBlock.x - 1) / threadsPerBlock.x, 
-                   (HEIGHT + threadsPerBlock.y - 1) / threadsPerBlock.y);
-    renderKernel<<<numBlocks, threadsPerBlock>>>(d_framebuffer, d_spheres, numSpheres, lightPos);
+    // Camera and Light
+    Vec3 cameraPos(0.5, 0.5, -2.0);
+    Vec3 cameraDir(0.0, 0.0, 1.0);
+    Vec3 cameraUp(0.0, 1.0, 0.0);
+    float fov = 60.0f * (M_PI / 180.0f);
+    float stepSize = 0.002f;
+    Vec3 lightPos(1.5, 2.0, -1.0);
+
+    // Launch kernel
+    dim3 blockSize(16, 16);
+    dim3 gridSize((IMAGE_WIDTH + blockSize.x - 1)/blockSize.x,
+                  (IMAGE_HEIGHT + blockSize.y - 1)/blockSize.y);
+
+    raycastKernel<<<gridSize, blockSize>>>(
+        d_volume,
+        d_framebuffer,
+        IMAGE_WIDTH,
+        IMAGE_HEIGHT,
+        cameraPos,
+        cameraDir.normalize(),
+        cameraUp.normalize(),
+        fov,
+        stepSize,
+        lightPos
+    );
     cudaDeviceSynchronize();
 
-    cudaMemcpy(h_framebuffer, d_framebuffer, WIDTH * HEIGHT * 3, cudaMemcpyDeviceToHost);
-    saveImage("output.ppm", h_framebuffer, WIDTH, HEIGHT);
+    // Copy framebuffer back to CPU
+    unsigned char* hostFramebuffer = new unsigned char[IMAGE_WIDTH * IMAGE_HEIGHT * 3];
+    cudaMemcpy(hostFramebuffer, d_framebuffer, fbSize, cudaMemcpyDeviceToHost);
 
+    // Export image
+    saveImage("output.ppm", hostFramebuffer, IMAGE_WIDTH, IMAGE_HEIGHT);
+
+    // Cleanup
+    delete[] hostVolume;
+    delete[] hostFramebuffer;
+    cudaFree(d_volume);
     cudaFree(d_framebuffer);
-    cudaFree(d_spheres);
-    delete[] h_framebuffer;
 
-    std::cout << "High-resolution image saved as output.ppm" << std::endl;
+    std::cout << "Phong-DVR rendering done. Image saved to output_phong_dvr.ppm" << std::endl;
     return 0;
 }
