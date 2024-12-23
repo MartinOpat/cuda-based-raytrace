@@ -18,9 +18,12 @@ public:
 
     GPUBuffer(DataReader& dataReader);
 
-    void loadFile(size_t fileIndex, size_t bufferIndex); // Async call
+    void loadFile(size_t fileIndex, size_t bufferIndex); // No blocking
 
     DataHandle getDataHandle(size_t bufferIndex); // Potentially blocking
+
+    template <typename T>
+    std::pair<size_t, T *> getAxis(size_t fileIndex, const std::string& axisName); // Most probably blocking
 
     ~GPUBuffer();
 private:

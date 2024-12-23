@@ -2,13 +2,13 @@
 #define GPUBUFFERHANDLER_H
 
 #include "fielddata.h"
-#include "filepathmanager.h"
+#include "gpubuffer.h"
 
 #include <string>
 
 class GPUBufferHandler {
 public:
-    GPUBufferHandler(const std::string &path, std::string variableName);
+    GPUBufferHandler();
 
     FieldData nextFieldData();
 
@@ -17,12 +17,7 @@ public:
     FieldMetadata *fmd;
 
 private:
-    // TODO: Implement GPUBuffer
-    FilePathManager filePathManager;
-    std::string variableName;
-
-    size_t presentTimeIndex;
-    size_t fileIndex;
+    GPUBuffer 
 };
 
 #endif //GPUBUFFERHANDLER_H

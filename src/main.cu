@@ -54,22 +54,27 @@ int main() {
 
     auto dataHandle = buffer.getDataHandle(0);
 
-    // std::cout << "got a data handle\n";
+    std::cout << "got a data handle\n";
+
+    auto x = buffer.getAxis<int>(0, "time");
+    std::cout << "size of x=" << x.first << "\n";
+    std::cout << "x[1]= " <<x.second[1] << "\n";
+
 
     // GPUBufferHandler buffer{path, variable};
 
     // auto fd = buffer.nextFieldData();
 
-    // float *ptr_mean;
-    // cudaMallocManaged(&ptr_mean, sizeof(float));
+    float *ptr_mean;
+    cudaMallocManaged(&ptr_mean, sizeof(float));
 
-    // computeMean<<<1, 1>>>(ptr_mean, dataHandle);
+    computeMean<<<1, 1>>>(ptr_mean, dataHandle);
 
-    // cudaDeviceSynchronize();
+    cudaDeviceSynchronize();
 
-    // std::cout << "Mean = " << std::fixed << std::setprecision(6) << *ptr_mean << "\n";
+    std::cout << "Mean = " << std::fixed << std::setprecision(6) << *ptr_mean << "\n";
 
-    // // cudaFree(fd.valArrays[0]);
-    // cudaFree(ptr_mean);
+    // cudaFree(fd.valArrays[0]);
+    cudaFree(ptr_mean);
     return 0;
 }
