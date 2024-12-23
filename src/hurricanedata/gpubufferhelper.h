@@ -1,7 +1,11 @@
 #include <netcdf>
 #include <cassert>
+
+using namespace std;
+using namespace netCDF;
+
 template <typename T>
-void readAndAllocateAxis(T** axis_ptr, size_t *size, const netCDF::NcVar &var) {
+void readAndAllocateAxis(T** axis_ptr, size_t *size, NcVar var) {
     assert(var.getDimCount() == 1);
     netCDF::NcDim dim = var.getDim(0);
     *size = dim.getSize();

@@ -24,12 +24,27 @@ print("Sum of U:", U_sum)
 
 sumval = 0
 row = U[2,20,100]
+
+print("Shape of row", row.shape)
+print("Row data for first 20 entries", row[0:5])
+
+row = row[0:5]
+print(f"{type(row)} {row.dtype}")
+
 n = 0
 for val in row:
-    if not np.ma.is_masked(val):
-        n+=1
-        sumval += val
-print(f"Why does {np.mean(row)=} not equal {sumval/n=} ?!")
+    #if not np.ma.is_masked(val):
+    n+=1
+    sumval += np.float64(val)
+Mean1 = np.mean(row)
+Mean2 = sumval/n
+
+print(type(Mean1))
+print(type(Mean2))
+print(Mean1)
+print(Mean2)
+
+print(f"Why does {np.mean(row):.10f} not equal {sumval/n:.10f} ?!")
 
 # Close the NetCDF file
 ncfile.close()
