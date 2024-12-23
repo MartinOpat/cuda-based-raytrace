@@ -5,6 +5,7 @@
 
 #include "linalg/linalg.h"
 
+// TODO: This is technically just for debugging, but if it is to be used outside of that, it should be a made into a proper class (I mean, just look at those functions below, it screams "add class attributes")
 struct Sphere {
     Vec3 center;
     double radius;
@@ -23,19 +24,18 @@ struct Sphere {
 };
 
 // A function to generate two concentric spherical shells
-__host__ void generateVolume(float* hostVolume, int volW, int volH, int volD) {
+__host__ void generateVolume(float* volumeData, int volW, int volH, int volD) {
     int cx = volW / 2;
     int cy = volH / 2;
     int cz = volD / 2;
     float maxRadius = static_cast<float>(volW) * 0.5f;
 
-    // Let's define two shells:
+    // Two shells
     float shell1Inner = 0.2f * maxRadius;
     float shell1Outer = 0.3f * maxRadius;
     float shell2Inner = 0.4f * maxRadius;
     float shell2Outer = 0.5f * maxRadius;
 
-    // Intensities
     float shell1Intensity = 0.8f;
     float shell2Intensity = 0.6f;
 
@@ -74,8 +74,21 @@ __host__ void generateVolume(float* hostVolume, int volW, int volH, int volD) {
                 }
 
                 if (intensity > 1.0f) intensity = 1.0f;
-                    hostVolume[z * volW * volH + y * volW + x] = intensity;
+                    volumeData[z * volW * volH + y * volW + x] = intensity;
             }
         }
     }
+}
+
+// Samples the voxel nearest to the given coordinates. TODO: Can be re-used in other places
+__device__ float sampleVolumeNearest(float* volumeData, int volW, int volH, int volD, int vx, int vy, int vz) {
+    if (vx < 0) vx = 0;
+    if (vy < 0) vy = 0;
+    if (vz < 0) vz = 0;
+    if (vx >= volW)  vx = volW  - 1;
+    if (vy >= volH) vy = volH - 1;
+    if (vz >= volD)  vz = volD  - 1;
+
+    int idx = vz * volW * volH + vy * volD + vx;
+    return volumeData[idx];
 }
