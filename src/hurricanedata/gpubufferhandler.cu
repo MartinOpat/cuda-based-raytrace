@@ -72,8 +72,8 @@ FieldData GPUBufferHandler::nextFieldData() {
     fieldInd = newFieldInd;
 
     if (newBufferInd != bufferInd) {
-        fileInd++;
         gpuBuffer.loadFile(fileInd, bufferInd);
+        fileInd++;
         bufferInd = newBufferInd;
     }
 
