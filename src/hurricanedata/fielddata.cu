@@ -8,10 +8,12 @@ __device__ float getVal(
     const size_t &latInd,
     const size_t &lonInd
 ) {
+    size_t valArrInd = (d.fieldInd + timeInd) / md.numberOfTimeStepsPerFile;
+    size_t trueTimeInd = (d.fieldInd + timeInd) % md.numberOfTimeStepsPerFile;
     size_t sizeSpatialData = md.widthSize*md.heightSize*md.depthSize;
     size_t size2DMapData = md.widthSize*md.heightSize;
-    return d.valArrays[0][
-        timeInd*sizeSpatialData
+    return d.valArrays[valArrInd][
+        trueTimeInd*sizeSpatialData
         + levInd*size2DMapData
         + latInd*md.widthSize
         + lonInd

@@ -1,5 +1,5 @@
 // #include "hurricanedata/fielddata.h"
-// #include "hurricanedata/gpubufferhandler.h"
+#include "hurricanedata/gpubufferhandler.h"
 #include "hurricanedata/datareader.h"
 #include "hurricanedata/gpubuffer.h"
 
@@ -10,32 +10,9 @@
 #include <memory>
 #include <iomanip> 
 
-
-// Not parallel computation
-// __global__ void computeMean(float *ans, const FieldMetadata &fmd, FieldData fd) {
-//     float sum = 0;
-//     size_t num_not_masked_values = 0;
-//     for (int i = 0; i < fmd.widthSize; i++) {
-//         double xi = getVal(fmd, fd, 2, 20, 100, i);
-//         if (xi < 1E14) { /* If x is not missing value */
-//             num_not_masked_values++;
-//             sum += xi;
-//         }
-//     }
-//     *ans = sum/num_not_masked_values;
-// }
-
-__global__ void computeMean(float *ans, DataHandle dh) {
-    float sum = 0;
-    size_t num_not_masked_values = 0;
-    for (int i = 0; i < dh.size; i++) {
-        double xi = dh.d_data[i];
-        if (xi < 1E14) { /* If x is not missing value */
-            num_not_masked_values++;
-            sum += xi;
-        }
-    }
-    *ans = sum/num_not_masked_values;
+__global__ void getSingleValue(float *ans, const FieldMetadata &fmd, FieldData fd) {
+    float xi = getVal(fmd, fd, 1, 20, 100, 100);
+    *ans = xi;
 }
 
 int main() {
@@ -52,29 +29,26 @@ int main() {
 
     std::cout << "created buffer\n";
 
-    auto dataHandle = buffer.getDataHandle(0);
+    GPUBufferHandler bufferHandler(buffer);
 
-    std::cout << "got a data handle\n";
+    std::cout << "created buffer handler\n";
 
-    auto x = buffer.getAxis<int>(0, "time");
-    std::cout << "size of x=" << x.first << "\n";
-    std::cout << "x[1]= " <<x.second[1] << "\n";
+    auto fd = bufferHandler.nextFieldData();
 
+    std::cout << "aquired field\n";
 
-    // GPUBufferHandler buffer{path, variable};
+    float *ptr_test_read;
+    cudaMallocManaged(&ptr_test_read, sizeof(float));
 
-    // auto fd = buffer.nextFieldData();
-
-    float *ptr_mean;
-    cudaMallocManaged(&ptr_mean, sizeof(float));
-
-    computeMean<<<1, 1>>>(ptr_mean, dataHandle);
+    getSingleValue<<<1, 1>>>(ptr_test_read, *bufferHandler.fmd, fd);
 
     cudaDeviceSynchronize();
 
-    std::cout << "Mean = " << std::fixed << std::setprecision(6) << *ptr_mean << "\n";
+    std::cout << "ptr_test_read = " << std::fixed << std::setprecision(6) << *ptr_test_read << "\n";
 
-    // cudaFree(fd.valArrays[0]);
-    cudaFree(ptr_mean);
+    // TODO: Write a example loop using buffering and measure it.
+
+    cudaFree(fd.valArrays[0]); // TODO: Free data properly in FieldData (maybe make an iterator)
+    cudaFree(ptr_test_read);
     return 0;
 }

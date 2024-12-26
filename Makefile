@@ -1,6 +1,6 @@
 # Compiler and flags
 NVCC = nvcc
-CXXFLAGS = -I./src -I./hurricanedata -std=c++17 $(shell nc-config --cxx4flags) $(shell nc-config --cxx4libs)
+CXXFLAGS = -I./src -I./hurricanedata -std=c++17 $(shell nc-config --cxx4flags) $(shell nc-config --cxx4libs) -g -G
 COMPILE_OBJ_FLAGS = --device-c
 
 # Directories

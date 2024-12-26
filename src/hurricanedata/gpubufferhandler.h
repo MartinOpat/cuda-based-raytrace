@@ -8,7 +8,7 @@
 
 class GPUBufferHandler {
 public:
-    GPUBufferHandler();
+    GPUBufferHandler(GPUBuffer& gpuBuffer);
 
     FieldData nextFieldData();
 
@@ -16,8 +16,15 @@ public:
 
     FieldMetadata *fmd;
 
+    static constexpr size_t numberOfTimeStepsPerField = 2; // TODO: Move this to fielddata
+
 private:
-    GPUBuffer 
+    FieldData setupField(size_t endBufferInd);
+    GPUBuffer& gpuBuffer;
+    size_t fileInd;
+    size_t bufferInd;
+    size_t fieldInd;
+    bool firstTimeStep = true;
 };
 
 #endif //GPUBUFFERHANDLER_H

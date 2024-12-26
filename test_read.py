@@ -46,5 +46,6 @@ print(Mean2)
 
 print(f"Why does {np.mean(row):.10f} not equal {sumval/n:.10f} ?!")
 
+
 # Close the NetCDF file
 ncfile.close()

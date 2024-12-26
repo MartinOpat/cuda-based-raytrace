@@ -18,6 +18,8 @@ struct File {
     size_t size;
     float *h_data; // host data
     float *d_data; // device data
+    int *times;
+    size_t timeSize;
 };
 
 struct LoadFileJob {
@@ -53,6 +55,9 @@ public:
     size_t getSize(size_t fileIndex); // Most probably blocking
     void getAxis(GetAxisDoubleJob job);
     void getAxis(GetAxisIntJob job);
+
+    template <typename T>
+    std::pair<size_t, T *> getAxis(size_t fileIndex, const std::string& axisName); // Most probably blocking
     ~impl();
 
     File buffer[numBufferedFiles];
@@ -84,37 +89,44 @@ size_t GPUBuffer::impl::getSize(size_t fileIndex) {
     return future.get();
 }
 
-template <>
-pair<size_t, double *> GPUBuffer::getAxis(size_t fileIndex, const string& axisName) {
-    promise<pair<size_t, double *>> promise;
-    future<pair<size_t, double *>> future = promise.get_future();
-    {
-        lock_guard<mutex> lk(pImpl->queuecv_m);
-        pImpl->jobs.push(GetAxisDoubleJob{fileIndex, axisName, move(promise)});
-    }
-    pImpl->queuecv.notify_all();
-
-    future.wait();
-
-    return future.get();
+template <typename T>
+pair<size_t, T *> GPUBuffer::getAxis(size_t fileIndex, const string& axisName) {
+    return pImpl->getAxis<T>(fileIndex, axisName);
 }
+template pair<size_t, int *> GPUBuffer::getAxis<int>(size_t fileIndex, const string& axisName);
 template pair<size_t, double *> GPUBuffer::getAxis<double>(size_t fileIndex, const string& axisName);
 
 template <>
-pair<size_t, int *> GPUBuffer::getAxis(size_t fileIndex, const string& axisName) {
-    promise<pair<size_t, int *>> promise;
-    future<pair<size_t, int *>> future = promise.get_future();
+pair<size_t, double *> GPUBuffer::impl::getAxis(size_t fileIndex, const string& axisName) {
+    promise<pair<size_t, double *>> promise;
+    future<pair<size_t, double *>> future = promise.get_future();
     {
-        lock_guard<mutex> lk(pImpl->queuecv_m);
-        pImpl->jobs.push(GetAxisIntJob{fileIndex, axisName, move(promise)});
+        lock_guard<mutex> lk(queuecv_m);
+        jobs.push(GetAxisDoubleJob{fileIndex, axisName, move(promise)});
     }
-    pImpl->queuecv.notify_all();
+    queuecv.notify_all();
 
     future.wait();
 
     return future.get();
 }
-template pair<size_t, int *> GPUBuffer::getAxis<int>(size_t fileIndex, const string& axisName);
+template pair<size_t, double *> GPUBuffer::impl::getAxis<double>(size_t fileIndex, const string& axisName);
+
+template <>
+pair<size_t, int *> GPUBuffer::impl::getAxis(size_t fileIndex, const string& axisName) {
+    promise<pair<size_t, int *>> promise;
+    future<pair<size_t, int *>> future = promise.get_future();
+    {
+        lock_guard<mutex> lk(queuecv_m);
+        jobs.push(GetAxisIntJob{fileIndex, axisName, move(promise)});
+    }
+    queuecv.notify_all();
+
+    future.wait();
+
+    return future.get();
+}
+template pair<size_t, int *> GPUBuffer::impl::getAxis<int>(size_t fileIndex, const string& axisName);
 
 GPUBuffer::impl::impl(DataReader& dataReader): dataReader(dataReader) {
     cudaStreamCreate(&iostream);
@@ -122,34 +134,26 @@ GPUBuffer::impl::impl(DataReader& dataReader): dataReader(dataReader) {
     ioworker = make_unique<thread>([this]() { worker(); });
 
     size_t size = getSize(0);
-    cout << "size = " << size << "\n";
-
+    auto x = getAxis<int>(0, "time");
+    size_t sizeTime = x.first;
+    cudaFree(x.second);
     for (size_t i = 0; i < numBufferedFiles; i++) {
         {
             File &file = buffer[i];
             lock_guard<mutex> lk(file.m);
             cudaMallocHost(&file.h_data, sizeof(float)*size);
-            cudaError_t status = cudaMalloc(&file.d_data, sizeof(float)*size);
-            if (status != cudaSuccess)
-                cerr << "Error allocating device memory. Status code: " << status << "\n";
+            cudaMalloc(&file.d_data, sizeof(float)*size);
+            cudaMallocManaged(&file.times, sizeof(int)*sizeTime);
             file.size = size;
             file.valid = false;
+            file.timeSize = sizeTime;
         }
-        loadFile(i, i);
-        {
-            // lock_guard<mutex> lk(queuecv_m);
-            // LoadFileJob job = {
-            //     .fileIndex = i,
-            //     .bufferIndex = i
-            // };
-            // cout << "enqueue file load job\n";
-            // jobs.push(job);
-
-        }
+        // loadFile(i, i);
     }
 }
 
-GPUBuffer::~GPUBuffer() { }
+GPUBuffer::~GPUBuffer() {
+}
 
 GPUBuffer::impl::~impl() {
     {
@@ -162,6 +166,7 @@ GPUBuffer::impl::~impl() {
         File &file = buffer[i];
         cudaFree(file.d_data);
         cudaFree(file.h_data);
+        cudaFree(file.times);
     }
     cudaStreamDestroy(iostream);
 }
@@ -172,11 +177,12 @@ void GPUBuffer::impl::loadFile(LoadFileJob job) {
     {
         lock_guard<mutex> lk(file.m);
         assert(!file.valid);
+        dataReader.loadFile<int>(file.times, job.fileIndex, "time"); // TODO: Times dont store anything useful :(
+        cout << "times[1] (inside inside) " << file.times[1]  << " for file with fileindex = " << job.fileIndex <<  "\n";
         dataReader.loadFile<float>(file.h_data, job.fileIndex);
         cudaMemcpyAsync(file.d_data, file.h_data, sizeof(float)*file.size, cudaMemcpyHostToDevice, iostream);
         cudaStreamSynchronize(iostream);
         buffer[job.bufferIndex].valid = true;
-        cout << "loaded file with index" << job.bufferIndex << "\n";
     }
     file.cv.notify_all();
 }
@@ -190,7 +196,7 @@ void GPUBuffer::impl::getAxis(GetAxisDoubleJob job) {
     pair<size_t, double *> array;
     array.first = dataReader.axisLength(job.fileIndex, job.axisName);
     cudaError_t status = cudaMallocManaged(&array.second, array.first*sizeof(double));
-    dataReader.loadFile<double>(array.second, job.fileIndex);
+    dataReader.loadFile<double>(array.second, job.fileIndex, job.axisName);
     job.axis.set_value(array);
 }
 
@@ -272,6 +278,8 @@ DataHandle GPUBuffer::getDataHandle(size_t bufferIndex) {
 
     DataHandle dh = {
         .d_data = file.d_data,
+        .times = file.times,
+        .timeSize = file.timeSize,
         .size = file.size
     };
     return dh;

@@ -14,6 +14,10 @@ struct FieldMetadata {
     double *lons; 
     double *lats;
     double *levs;
+
+    size_t timeSize; // Number of different times
+
+    size_t numberOfTimeStepsPerFile;
 };
 
 using FieldMetadata = FieldMetadata;
@@ -21,16 +25,15 @@ using FieldMetadata = FieldMetadata;
 struct FieldData {
     static constexpr size_t FILESNUM = 2; // Number of files stored in a FieldData struct.
 
-    // An array of length FILESNUM storing pointers to 4D arrays stored in device memory.
-    float *valArrays[FILESNUM];
+    // A uniform array of length FILESNUM storing pointers to 4D arrays stored in device memory.
+    float **valArrays;
 
-    size_t timeSize; // Number of different times
-    // times is a managed Unified Memory array of size timeSize that indicates 
-    // that getVal(md, d, t, i, j, k) is a value at time times[t].
-    int *times;
+    size_t fieldInd;
+
+    // times is a managed Unified Memory array of size (FILESNUM, numberOfTimeStepsPerFile)
+    int **times;
 };
 
-using FieldData = FieldData;
 
 extern __device__ float getVal(
     const FieldMetadata &md,
