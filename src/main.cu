@@ -16,7 +16,7 @@ __global__ void getSingleValue(float *ans, const FieldMetadata &fmd, FieldData f
 }
 
 int main() {
-    std::string path = "data";
+    std::string path = "data/atmosphere_MERRA-wind-speed[179253532]";
 
     std::string variable = "T";
 
@@ -31,24 +31,23 @@ int main() {
 
     GPUBufferHandler bufferHandler(buffer);
 
-    std::cout << "created buffer handler\n";
-
-    auto fd = bufferHandler.nextFieldData();
-
-    std::cout << "aquired field\n";
-
     float *ptr_test_read;
     cudaMallocManaged(&ptr_test_read, sizeof(float));
 
-    getSingleValue<<<1, 1>>>(ptr_test_read, *bufferHandler.fmd, fd);
+    std::cout << "created buffer handler\n";
+    for (int i = 0; i < 10; i++) {
+        FieldData fd = bufferHandler.nextFieldData();
 
-    cudaDeviceSynchronize();
+        getSingleValue<<<1, 1>>>(ptr_test_read, *bufferHandler.fmd, fd);
 
-    std::cout << "ptr_test_read = " << std::fixed << std::setprecision(6) << *ptr_test_read << "\n";
+        cudaDeviceSynchronize();
 
-    // TODO: Write a example loop using buffering and measure it.
+        std::cout << "ptr_test_read = " << std::fixed << std::setprecision(6) << *ptr_test_read << "\n";
+    }
+    
+    // TODO: Write an example loop using buffering and measure it.
 
-    cudaFree(fd.valArrays[0]); // TODO: Free data properly in FieldData (maybe make an iterator)
+    // TODO: Free data properly in FieldData (maybe make an iterator)
     cudaFree(ptr_test_read);
     return 0;
 }

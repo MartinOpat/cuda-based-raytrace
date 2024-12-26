@@ -21,28 +21,31 @@ gpuBuffer(gpuBuffer), fieldInd(0), bufferInd(0), fileInd(0) {
     fmd->depthSize = depthSize;
     fmd->levs = levs;
 
-
     for (size_t i = 0; i < GPUBuffer::numBufferedFiles; i++) {
         gpuBuffer.loadFile(fileInd,fileInd);
         fileInd++;
     }
 
-    fmd->numberOfTimeStepsPerFile = 4; // TODO: Maybe find a better way to do this.
     fmd->timeSize = GPUBufferHandler::numberOfTimeStepsPerField;
+
+    cudaMallocManaged(&fmd->times, sizeof(fmd->numberOfTimeStepsPerFile*sizeof(int)));
+
+    auto [numberOfTimeStepsPerFile, times] = gpuBuffer.getAxis<int>(0, "time");
+    fmd->numberOfTimeStepsPerFile = numberOfTimeStepsPerFile;
+    fmd->times = times;
+
+    cudaMallocManaged(&valArrays, sizeof(float *)*FieldData::FILESNUM);
 }
 
 FieldData GPUBufferHandler::setupField(size_t newEndBufferInd) {
     
     FieldData fd;
-    cudaMallocManaged(&fd.valArrays, sizeof(sizeof(float *)*FieldData::FILESNUM));
-    cudaMallocManaged(&fd.times, sizeof(sizeof(int *)*FieldData::FILESNUM));
     size_t fieldDataInd = 0;
-    cout << "getting field from files " << bufferInd  << " to " << newEndBufferInd << "\n";
+    fd.valArrays = valArrays;
+    cout << "getting field from files " << bufferInd  << " to " << newEndBufferInd << " with a field index of " << fieldInd << "\n";
     for (int i = bufferInd; i <= newEndBufferInd; i++) {
-        cout << "getting handle for " << i << "\n";
         DataHandle x = gpuBuffer.getDataHandle(i);
         fd.valArrays[fieldDataInd] = x.d_data;
-        fd.times[fieldDataInd] = x.times;
         fieldDataInd++;
     }
     fd.fieldInd = fieldInd;
@@ -51,7 +54,6 @@ FieldData GPUBufferHandler::setupField(size_t newEndBufferInd) {
 }
 
 FieldData GPUBufferHandler::nextFieldData() {
-    
     DataHandle x = gpuBuffer.getDataHandle(bufferInd);
     size_t newFieldInd = (fieldInd + 1) % fmd->numberOfTimeStepsPerFile;
     size_t newBufferInd = (bufferInd + ((fieldInd + 1) / fmd->numberOfTimeStepsPerFile)) % GPUBuffer::numBufferedFiles;
@@ -62,25 +64,17 @@ FieldData GPUBufferHandler::nextFieldData() {
     size_t newEndFieldInd = (endFieldInd + 1) % fmd->numberOfTimeStepsPerFile;
     size_t newEndBufferInd = (endBufferInd + ((endFieldInd + 1) / fmd->numberOfTimeStepsPerFile)) % GPUBuffer::numBufferedFiles;
 
-    // size_t newBufferInd = (bufferInd + 1) % GPUBuffer::numBufferedFiles;
-    // size_t newFieldInd = (fieldInd + ((bufferInd + 1) / 4)) % x.timeSize;
-
-    // size_t endBufferInd = (bufferInd + GPUBufferHandler::numberOfTimeStepsPerField) % GPUBuffer::numBufferedFiles;
-    // size_t endFieldInd = (fieldInd + ((bufferInd + GPUBufferHandler::numberOfTimeStepsPerField) / 4)) % x.timeSize;
-
-    // size_t newEndBufferInd = (endBufferInd + 1) % GPUBuffer::numBufferedFiles;
-    // size_t newEndFieldInd = (endFieldInd + ((endBufferInd + 1) / 4)) % x.timeSize;
-
     if(firstTimeStep) {
         firstTimeStep = false;
-        return setupField(endFieldInd);
+        return setupField(endBufferInd);
     } 
+
+    fieldInd = newFieldInd;
 
     if (newBufferInd != bufferInd) {
         fileInd++;
         gpuBuffer.loadFile(fileInd, bufferInd);
         bufferInd = newBufferInd;
-        fieldInd = newFieldInd;
     }
 
     if (newEndBufferInd != endBufferInd) {
@@ -94,5 +88,6 @@ GPUBufferHandler::~GPUBufferHandler() {
     cudaFree(fmd->lons);
     cudaFree(fmd->lats);
     cudaFree(fmd->levs);
+    cudaFree(valArrays);
     cudaFree(fmd);
 }

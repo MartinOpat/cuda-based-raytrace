@@ -17,6 +17,8 @@ struct FieldMetadata {
 
     size_t timeSize; // Number of different times
 
+    // times is a managed Unified Memory array of size numberOfTimeStepsPerFile
+    int *times;
     size_t numberOfTimeStepsPerFile;
 };
 
@@ -29,9 +31,6 @@ struct FieldData {
     float **valArrays;
 
     size_t fieldInd;
-
-    // times is a managed Unified Memory array of size (FILESNUM, numberOfTimeStepsPerFile)
-    int **times;
 };
 
 

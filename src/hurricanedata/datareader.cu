@@ -49,7 +49,6 @@ void DataReader::loadFile(T* dataOut, size_t fileIndex, const string& varName) {
     multimap<string, NcVar> vars = data.getVars();
 
     NcVar var = vars.find(varName)->second;   
-    cout << "var = " << varName << "with size = " << var.getDim(0).getSize() << "\n";
 
     var.getVar(dataOut);
 }

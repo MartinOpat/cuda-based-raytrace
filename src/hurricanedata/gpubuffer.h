@@ -9,8 +9,6 @@
 
 struct DataHandle {
     float *d_data; // Device memory
-    int* times; // Uniform memory
-    size_t timeSize;
     size_t size;
 };
 

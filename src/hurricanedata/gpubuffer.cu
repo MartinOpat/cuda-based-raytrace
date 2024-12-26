@@ -18,8 +18,6 @@ struct File {
     size_t size;
     float *h_data; // host data
     float *d_data; // device data
-    int *times;
-    size_t timeSize;
 };
 
 struct LoadFileJob {
@@ -143,10 +141,8 @@ GPUBuffer::impl::impl(DataReader& dataReader): dataReader(dataReader) {
             lock_guard<mutex> lk(file.m);
             cudaMallocHost(&file.h_data, sizeof(float)*size);
             cudaMalloc(&file.d_data, sizeof(float)*size);
-            cudaMallocManaged(&file.times, sizeof(int)*sizeTime);
             file.size = size;
             file.valid = false;
-            file.timeSize = sizeTime;
         }
         // loadFile(i, i);
     }
@@ -165,20 +161,17 @@ GPUBuffer::impl::~impl() {
     for (size_t i = 0; i < numBufferedFiles; i++) {
         File &file = buffer[i];
         cudaFree(file.d_data);
-        cudaFree(file.h_data);
-        cudaFree(file.times);
+        cudaFreeHost(file.h_data);
     }
     cudaStreamDestroy(iostream);
 }
 
 void GPUBuffer::impl::loadFile(LoadFileJob job) {
     File &file = buffer[job.bufferIndex];
-
     {
         lock_guard<mutex> lk(file.m);
         assert(!file.valid);
-        dataReader.loadFile<int>(file.times, job.fileIndex, "time"); // TODO: Times dont store anything useful :(
-        cout << "times[1] (inside inside) " << file.times[1]  << " for file with fileindex = " << job.fileIndex <<  "\n";
+        cout << "loading file with index " << job.fileIndex << "\n";
         dataReader.loadFile<float>(file.h_data, job.fileIndex);
         cudaMemcpyAsync(file.d_data, file.h_data, sizeof(float)*file.size, cudaMemcpyHostToDevice, iostream);
         cudaStreamSynchronize(iostream);
@@ -278,8 +271,6 @@ DataHandle GPUBuffer::getDataHandle(size_t bufferIndex) {
 
     DataHandle dh = {
         .d_data = file.d_data,
-        .times = file.times,
-        .timeSize = file.timeSize,
         .size = file.size
     };
     return dh;
