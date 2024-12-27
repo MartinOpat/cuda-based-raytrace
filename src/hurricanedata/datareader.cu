@@ -44,6 +44,9 @@ void DataReader::loadFile(T* dataOut, size_t fileIndex) {
 
 template <typename T>
 void DataReader::loadFile(T* dataOut, size_t fileIndex, const string& varName) {
+    // TODO: We could make the index wrap around so that we dont lose data
+    // using fileIndex % NUMBEROFFILES here.
+
     NcFile data(filePathManager.getPath(fileIndex), NcFile::read);
 
     multimap<string, NcVar> vars = data.getVars();

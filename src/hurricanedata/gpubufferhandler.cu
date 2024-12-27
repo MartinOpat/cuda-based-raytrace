@@ -26,7 +26,7 @@ gpuBuffer(gpuBuffer), fieldInd(0), bufferInd(0), fileInd(0) {
         fileInd++;
     }
 
-    fmd->timeSize = GPUBufferHandler::numberOfTimeStepsPerField;
+    fmd->timeSize = FieldData::numberOfTimeStepsPerField;
 
     cudaMallocManaged(&fmd->times, sizeof(fmd->numberOfTimeStepsPerFile*sizeof(int)));
 
@@ -58,8 +58,8 @@ FieldData GPUBufferHandler::nextFieldData() {
     size_t newFieldInd = (fieldInd + 1) % fmd->numberOfTimeStepsPerFile;
     size_t newBufferInd = (bufferInd + ((fieldInd + 1) / fmd->numberOfTimeStepsPerFile)) % GPUBuffer::numBufferedFiles;
 
-    size_t endFieldInd = (fieldInd + GPUBufferHandler::numberOfTimeStepsPerField - 1) % fmd->numberOfTimeStepsPerFile;
-    size_t endBufferInd = (bufferInd + (fieldInd + GPUBufferHandler::numberOfTimeStepsPerField - 1)/fmd->numberOfTimeStepsPerFile) % GPUBuffer::numBufferedFiles;
+    size_t endFieldInd = (fieldInd + FieldData::numberOfTimeStepsPerField - 1) % fmd->numberOfTimeStepsPerFile;
+    size_t endBufferInd = (bufferInd + (fieldInd + FieldData::numberOfTimeStepsPerField - 1)/fmd->numberOfTimeStepsPerFile) % GPUBuffer::numBufferedFiles;
 
     size_t newEndFieldInd = (endFieldInd + 1) % fmd->numberOfTimeStepsPerFile;
     size_t newEndBufferInd = (endBufferInd + ((endFieldInd + 1) / fmd->numberOfTimeStepsPerFile)) % GPUBuffer::numBufferedFiles;

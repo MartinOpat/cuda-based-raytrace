@@ -41,7 +41,6 @@ int main() {
         middleOfTwoValues<<<1, 1>>>(ptr_test_read, *bufferHandler.fmd, fd);
 
         cudaDeviceSynchronize();
-
         std::cout << "ptr_test_read = " << std::fixed << std::setprecision(6) << *ptr_test_read << "\n";
     }
     
