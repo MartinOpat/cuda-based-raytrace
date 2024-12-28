@@ -1,6 +1,7 @@
 # Compiler and flags
 NVCC = nvcc
-CXXFLAGS = -I./src -I./linalg -I./img -I./objs -std=c++17
+CXXFLAGS = -I./src -I./hurricanedata -std=c++17 $(shell nc-config --cxx4flags) $(shell nc-config --cxx4libs) -g -G
+COMPILE_OBJ_FLAGS = --device-c
 
 # Directories
 SRC_DIR = src
@@ -8,7 +9,7 @@ BUILD_DIR = build
 
 # Files
 TARGET = $(BUILD_DIR)/main
-SRC_FILES = $(wildcard $(SRC_DIR)/*.cu)
+SRC_FILES := $(shell find $(SRC_DIR) -type f \( -name '*.cu' -o -name '*.cpp' \))
 OBJ_FILES = $(patsubst $(SRC_DIR)/%.cu,$(BUILD_DIR)/%.o,$(SRC_FILES))
 
 # Default target
@@ -16,11 +17,12 @@ all: $(TARGET)
 
 # Build the main target
 $(TARGET): $(OBJ_FILES) | $(BUILD_DIR)
-	$(NVCC) $(CXXFLAGS) -o $@ $^
+	$(NVCC) $(CXXFLAGS) $^ -o $@
 
 # Compile object files
 $(BUILD_DIR)/%.o: $(SRC_DIR)/%.cu
-	$(NVCC) $(CXXFLAGS) -c $< -o $@
+	@mkdir -p $(dir $@)
+	$(NVCC) $(CXXFLAGS) $(COMPILE_OBJ_FLAGS) -c $< -o $@
 
 # Debug build
 debug: CXXFLAGS += -g
