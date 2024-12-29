@@ -85,9 +85,9 @@ __device__ float sampleVolumeNearest(float* volumeData, const int volW, const in
     if (vx < 0) vx = 0;
     if (vy < 0) vy = 0;
     if (vz < 0) vz = 0;
-    if (vx >= volW)  vx = volW  - 1;
+    if (vx >= volW) vx = volW  - 1;
     if (vy >= volH) vy = volH - 1;
-    if (vz >= volD)  vz = volD  - 1;
+    if (vz >= volD) vz = volD  - 1;
 
     int idx = vz * volW * volH + vy * volD + vx;
     return volumeData[idx];
