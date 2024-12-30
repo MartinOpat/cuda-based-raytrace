@@ -12,7 +12,7 @@ __device__ Vec3 phongShading(const Vec3& normal, const Vec3& lightDir, const Vec
 
     Vec3 reflectDir = (normal * (2.0 * normal.dot(lightDir)) - lightDir).normalize();
     double spec = pow(fmax(viewDir.dot(reflectDir), 0.0), shininess);
-    Vec3 specular = Vec3(1.0, 1.0, 1.0) * (specularStrength * spec);
+    Vec3 specular = Vec3::init(1.0, 1.0, 1.0) * (specularStrength * spec);
 
     return ambient + diffuse + specular;
 }

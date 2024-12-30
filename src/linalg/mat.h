@@ -20,5 +20,5 @@ __device__ Vec3 computeGradient(float* volumeData, const int volW, const int vol
     float gz = volumeData[zp * volW * volH + y  * volW + x ]
              - volumeData[zm * volW * volH + y  * volW + x ];
 
-    return Vec3(gx, gy, gz);
+    return Vec3::init(gx, gy, gz);
 }
