@@ -9,16 +9,7 @@
 #include "linalg/linalg.h" 
 #include "objs/sphere.h"
 #include "img/handler.h"
-
-// TODO: Eventually, export this into a better place (i.e., such that we do not have to recompile every time we change a parameter)
-static const int VOLUME_WIDTH  = 49;
-static const int VOLUME_HEIGHT = 51;
-static const int VOLUME_DEPTH  = 42;
-
-static const int IMAGE_WIDTH   = 2560;
-static const int IMAGE_HEIGHT  = 1440;
-
-static const int SAMPLES_PER_PIXEL = 8;  // TODO: Right now uses simple variance, consider using something more advanced (e.g., some commonly-used noise map)
+#include "consts.h"
 
 
 __constant__ int d_volumeWidth;
