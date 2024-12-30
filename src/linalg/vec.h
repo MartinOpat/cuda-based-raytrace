@@ -24,3 +24,5 @@ struct Vec3 {  // TODO: Maybe make this into a class
     __host__ __device__ Vec3 cross(const Vec3& b) const { return Vec3(y * b.z - z * b.y, z * b.x - x * b.z, x * b.y - y * b.x); }
     __host__ __device__ Vec3 normalize() const { double len = sqrt(x * x + y * y + z * z); return Vec3(x / len, y / len, z / len); }
 };
+
+typedef Vec3 Point3;
