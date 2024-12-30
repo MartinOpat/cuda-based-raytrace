@@ -1,102 +1,112 @@
-#include <cuda_runtime.h>
-#include <device_launch_parameters.h>
 #include <iostream>
+#include <fstream>
 #include <cmath>
+#include <cuda_runtime.h>
+#include <vector>
+#include <algorithm>
 
-#include "linalg/linalg.h"
+#include "hurricanedata/datareader.h"
+#include "linalg/linalg.h" 
 #include "objs/sphere.h"
 #include "img/handler.h"
-
-#define WIDTH 3840
-#define HEIGHT 2160
-#define SAMPLES_PER_PIXEL 8
+#include "consts.h"
+#include "illumination/illumination.h"
 
 
-__device__ Vec3 phongShading(const Vec3& point, const Vec3& normal, const Vec3& lightDir, const Vec3& viewDir, const Vec3& color) {
-    double ambientStrength = 0.1;
-    double diffuseStrength = 0.8;
-    double specularStrength = 0.5;
-    int shininess = 64;
+static float* d_volume = nullptr;
 
-    Vec3 ambient = color * ambientStrength;
-    double diff = max(normal.dot(lightDir), 0.0);
-    Vec3 diffuse = color * (diffuseStrength * diff);
 
-    Vec3 reflectDir = (normal * (2.0 * normal.dot(lightDir)) - lightDir).normalize();
-    double spec = pow(max(viewDir.dot(reflectDir), 0.0), shininess);
-    Vec3 specular = Vec3(1.0, 1.0, 1.0) * (specularStrength * spec);
-
-    return ambient + diffuse + specular;
+void getTemperature(std::vector<float>& temperatureData, int idx = 0) {
+    std::string path = "data/trimmed";
+    std::string variable = "T";
+    DataReader dataReader(path, variable);
+    size_t dataLength = dataReader.fileLength(idx);
+    temperatureData.resize(dataLength);
+    dataReader.loadFile(temperatureData.data(), idx);
 }
 
-__global__ void renderKernel(unsigned char* framebuffer, Sphere* spheres, int numSpheres, Vec3 lightPos) {
-    int x = blockIdx.x * blockDim.x + threadIdx.x;
-    int y = blockIdx.y * blockDim.y + threadIdx.y;
-    if (x >= WIDTH || y >= HEIGHT) return;
+void getSpeed(std::vector<float>& speedData, int idx = 0) {
+    std::string path = "data/trimmed";
+    std::string varU = "U";
+    std::string varV = "V";
 
-    int pixelIndex = (y * WIDTH + x) * 3;
-    Vec3 rayOrigin(0, 0, 0);
-    Vec3 colCum(0, 0, 0);
+    DataReader dataReaderU(path, varU);
+    DataReader dataReaderV(path, varV);
 
-    double spp = static_cast<double>(SAMPLES_PER_PIXEL);
-    for (int sample = 0; sample < SAMPLES_PER_PIXEL; sample++) {
-        double u = (x + (sample / spp) - WIDTH / 2.0) / WIDTH;
-        double v = (y + (sample / spp) - HEIGHT / 2.0) / HEIGHT;
-        Vec3 rayDir(u, v, 1.0);
-        rayDir = rayDir.normalize();
+    size_t dataLength = dataReaderU.fileLength(idx);
+    speedData.resize(dataLength);
+    std::vector<float> uData(dataLength);
+    std::vector<float> vData(dataLength);
 
-        for (int i = 0; i < numSpheres; ++i) {
-            double t;
-            if (spheres[i].intersect(rayOrigin, rayDir, t)) {
-                Vec3 hitPoint = rayOrigin + rayDir * t;
-                Vec3 normal = (hitPoint - spheres[i].center).normalize();
-                Vec3 lightDir = (lightPos - hitPoint).normalize();
-                Vec3 viewDir = -rayDir;
+    dataReaderU.loadFile(uData.data(), idx);
+    dataReaderV.loadFile(vData.data(), idx);
 
-                colCum = colCum + phongShading(hitPoint, normal, lightDir, viewDir, spheres[i].color);
-            }
-        }
+    for (int i = 0; i < dataLength; i++) {
+        speedData[i] = sqrt(uData[i]*uData[i] + vData[i]*vData[i]);
+    }
+}
+
+int main(int argc, char** argv) {
+    std::vector<float> data;
+    // getTemperature(data);
+    getSpeed(data);
+
+
+    // TODO: Eveontually remove debug below (i.e., eliminate for-loop etc.)
+    // Generate debug volume data
+    float* hostVolume = new float[VOLUME_WIDTH * VOLUME_HEIGHT * VOLUME_DEPTH];
+    // generateVolume(hostVolume, VOLUME_WIDTH, VOLUME_HEIGHT, VOLUME_DEPTH);
+    for (int i = 0; i < VOLUME_WIDTH * VOLUME_HEIGHT * VOLUME_DEPTH; i++) {  // TODO: This is technically an unnecessary artifact of the old code taking in a float* instead of a std::vector
+        // Discard temperatures above a small star (supposedly, missing temperature values)
+        hostVolume[i] = data[i];
+        if (data[i] + epsilon >= infty) hostVolume[i] = 0.0f;
     }
 
-    // Average color across all samples
-    Vec3 color = colCum * (1.0 / SAMPLES_PER_PIXEL);
+    // Min-max normalization
+    float minVal = *std::min_element(hostVolume, hostVolume + VOLUME_WIDTH * VOLUME_HEIGHT * VOLUME_DEPTH);
+    float maxVal = *std::max_element(hostVolume, hostVolume + VOLUME_WIDTH * VOLUME_HEIGHT * VOLUME_DEPTH);
+    for (int i = 0; i < VOLUME_WIDTH * VOLUME_HEIGHT * VOLUME_DEPTH; i++) {
+        hostVolume[i] = (hostVolume[i] - minVal) / (maxVal - minVal);
+    }
 
-    framebuffer[pixelIndex] = static_cast<unsigned char>(fmin(color.x, 1.0) * 255);
-    framebuffer[pixelIndex + 1] = static_cast<unsigned char>(fmin(color.y, 1.0) * 255);
-    framebuffer[pixelIndex + 2] = static_cast<unsigned char>(fmin(color.z, 1.0) * 255);
-}
+    // Allocate + copy data to GPU
+    size_t volumeSize = sizeof(float) * VOLUME_WIDTH * VOLUME_HEIGHT * VOLUME_DEPTH;
+    cudaMalloc((void**)&d_volume, volumeSize);
+    cudaMemcpy(d_volume, hostVolume, volumeSize, cudaMemcpyHostToDevice);
 
-
-
-int main() {
-    Sphere spheres[] = {
-        { Vec3(0, 0, 5), 1.0, Vec3(1.0, 0.0, 0.0) },  // Red sphere
-        { Vec3(-2, 1, 7), 1.0, Vec3(0.0, 1.0, 0.0) }, // Green sphere
-        { Vec3(2, -1, 6), 1.0, Vec3(0.0, 0.0, 1.0) }  // Blue sphere
-    };
-    int numSpheres = sizeof(spheres) / sizeof(Sphere);
-    Vec3 lightPos(5, 5, 0);
-
+    // Allocate framebuffer
     unsigned char* d_framebuffer;
-    unsigned char* h_framebuffer = new unsigned char[WIDTH * HEIGHT * 3];
-    Sphere* d_spheres;
-    cudaMalloc(&d_framebuffer, WIDTH * HEIGHT * 3);
-    cudaMalloc(&d_spheres, numSpheres * sizeof(Sphere));
-    cudaMemcpy(d_spheres, spheres, numSpheres * sizeof(Sphere), cudaMemcpyHostToDevice);
+    size_t fbSize = IMAGE_WIDTH * IMAGE_HEIGHT * 3 * sizeof(unsigned char);
+    cudaMalloc((void**)&d_framebuffer, fbSize);
+    cudaMemset(d_framebuffer, 0, fbSize);
 
-    dim3 threadsPerBlock(16, 16);
-    dim3 numBlocks((WIDTH + threadsPerBlock.x - 1) / threadsPerBlock.x, 
-                   (HEIGHT + threadsPerBlock.y - 1) / threadsPerBlock.y);
-    renderKernel<<<numBlocks, threadsPerBlock>>>(d_framebuffer, d_spheres, numSpheres, lightPos);
+    // Copy external constants from consts.h to cuda
+    copyConstantsToDevice();
+
+    // Launch kernel
+    dim3 blockSize(16, 16);  // TODO: Figure out a good size for parallelization
+    dim3 gridSize((IMAGE_WIDTH + blockSize.x - 1)/blockSize.x,
+                  (IMAGE_HEIGHT + blockSize.y - 1)/blockSize.y);
+
+    raycastKernel<<<gridSize, blockSize>>>(
+        d_volume,
+        d_framebuffer
+    );
     cudaDeviceSynchronize();
 
-    cudaMemcpy(h_framebuffer, d_framebuffer, WIDTH * HEIGHT * 3, cudaMemcpyDeviceToHost);
-    saveImage("output.ppm", h_framebuffer, WIDTH, HEIGHT);
+    // Copy framebuffer back to CPU
+    unsigned char* hostFramebuffer = new unsigned char[IMAGE_WIDTH * IMAGE_HEIGHT * 3];
+    cudaMemcpy(hostFramebuffer, d_framebuffer, fbSize, cudaMemcpyDeviceToHost);
 
+    // Export image
+    saveImage("output.ppm", hostFramebuffer, IMAGE_WIDTH, IMAGE_HEIGHT);
+
+    // Cleanup
+    delete[] hostVolume;
+    delete[] hostFramebuffer;
+    cudaFree(d_volume);
     cudaFree(d_framebuffer);
-    cudaFree(d_spheres);
-    delete[] h_framebuffer;
 
-    std::cout << "High-resolution image saved as output.ppm" << std::endl;
+    std::cout << "Phong-DVR rendering done. Image saved to output.ppm" << std::endl;
     return 0;
 }
