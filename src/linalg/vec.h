@@ -8,6 +8,7 @@ struct Vec3 {  // TODO: Maybe make this into a class
 
     __host__ __device__ Vec3() : x(0), y(0), z(0) {}
     __host__ __device__ Vec3(double x, double y, double z) : x(x), y(y), z(z) {}
+    __host__ __device__ Vec3(const double (&arr)[3]) : x(arr[0]), y(arr[1]), z(arr[2]) {}
 
     __host__ __device__ Vec3 operator+(const Vec3& b) const { return Vec3(x + b.x, y + b.y, z + b.z); }
     __host__ __device__ Vec3& operator+=(const Vec3& b) { x += b.x; y += b.y; z += b.z; return *this; }
