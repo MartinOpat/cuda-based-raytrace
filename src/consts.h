@@ -2,6 +2,7 @@
 #define CONSTS_H
 
 #include "linalg/vec.h"
+#include <cmath>
 
 // --------------------------- Basic Constants ---------------------------
 const int VOLUME_WIDTH  = 49;
@@ -21,7 +22,7 @@ const int SAMPLES_PER_PIXEL = 8;  // TODO: Right now uses simple variance, consi
 const float alphaAcumLimit = 0.65f;   // TODO: Idk what a good accumulation value is
 const float minAllowedDensity = 0.001f;
 
-float stepSize = 0.002f;
+const float stepSize = 0.002f;
 
 
 // --------------------------- Illumination Constants ---------------------------
@@ -29,12 +30,15 @@ const double ambientStrength  = 0.3;
 const double diffuseStrength  = 0.8;
 const double specularStrength = 0.5;
 const int shininess           = 32;
+const float fov             = 60.0f * (M_PI / 180.0f);
 
 // Camera and Light
-Point3 cameraPos(-0.7, -1.0, -2.0);
-Vec3 cameraDir = Vec3(0.4, 0.6, 1.0).normalize();
-Vec3 cameraUp = Vec3(0.0, 1.0, 0.0).normalize();
-float fov = 60.0f * (M_PI / 180.0f);
-Point3 lightPos(1.5, 2.0, -1.0);
+extern __device__ Point3 d_cameraPos;
+extern __device__ Vec3 d_cameraDir;
+extern __device__ Vec3 d_cameraUp;
+extern __device__ Point3 d_lightPos;
+
+// --------------------------- Functions for handling external constants ---------------------------
+void copyConstantsToDevice();
 
 #endif // CONSTS_H
