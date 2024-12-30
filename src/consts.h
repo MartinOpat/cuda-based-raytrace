@@ -31,10 +31,10 @@ const double specularStrength = 0.5;
 const int shininess           = 32;
 
 // Camera and Light
-Vec3 cameraPos(-0.7, -1.0, -2.0);
-Vec3 cameraDir(0.4, 0.6, 1.0);
-Vec3 cameraUp(0.0, 1.0, 0.0);
+Point3 cameraPos(-0.7, -1.0, -2.0);
+Vec3 cameraDir = Vec3(0.4, 0.6, 1.0).normalize();
+Vec3 cameraUp = Vec3(0.0, 1.0, 0.0).normalize();
 float fov = 60.0f * (M_PI / 180.0f);
-Vec3 lightPos(1.5, 2.0, -1.0);
+Point3 lightPos(1.5, 2.0, -1.0);
 
 #endif // CONSTS_H
