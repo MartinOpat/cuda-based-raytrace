@@ -16,15 +16,10 @@ __constant__ int d_volumeWidth;
 __constant__ int d_volumeHeight;
 __constant__ int d_volumeDepth;
 
-static float* d_volume = nullptr;  // TODO: Adjust according to how data is loaded
+static float* d_volume = nullptr;
 
 // ----------------------------------------------------------------------------------------------------
 __device__ Vec3 phongShading(const Vec3& normal, const Vec3& lightDir, const Vec3& viewDir, const Vec3& baseColor) {
-    double ambientStrength  = 0.3;
-    double diffuseStrength  = 0.8;
-    double specularStrength = 0.5;
-    int    shininess        = 32;
-
     Vec3 ambient = baseColor * ambientStrength;
     double diff = fmax(normal.dot(lightDir), 0.0);
     Vec3 diffuse = baseColor * (diffuseStrength * diff);
@@ -63,17 +58,16 @@ __global__ void raycastKernel(float*  volumeData, unsigned char* framebuffer, in
         Vec3 rayDir = (cameraDir + cameraRight*u + cameraUp*v).normalize();
 
         // Intersect (for simplicity just a 3D box from 0 to 1 in all dimensions) - TODO: Think about whether this is the best way to do this
-        float tNear = 0.f;   // TODO: These are also linear transforms, so move away
+        float tNear = 0.0f;
         float tFar  = 1e6f;
-
         auto intersectAxis = [&](float start, float dirVal) {
-            if (fabsf(dirVal) < 1e-10f) {  // TDDO: Add a constant - epsilon
+            if (fabsf(dirVal) < epsilon) {
                 if (start < 0.f || start > 1.f) {
                     tNear = 1e9f;
                     tFar  = -1e9f;
                 }
             } else {
-                float t0 = (0.0f - start) / dirVal;  // TODO: 0.0 and 1.0 depend on the box size -> move to a constant
+                float t0 = (0.0f - start) / dirVal;
                 float t1 = (1.0f - start) / dirVal;
                 if (t0>t1) { 
                     float tmp=t0; 
@@ -92,11 +86,11 @@ __global__ void raycastKernel(float*  volumeData, unsigned char* framebuffer, in
         if (tNear > tFar) continue;  // No intersectionn
         if (tNear < 0.0f) tNear = 0.0f;
 
-        float colorR = 0.f, colorG = 0.f, colorB = 0.f;
-        float alphaAccum = 0.f;
+        float colorR = 0.0f, colorG = 0.0f, colorB = 0.0f;
+        float alphaAccum = 0.0f;
 
         float tCurrent = tNear;
-        while (tCurrent < tFar && alphaAccum < 0.65f) { // TODO: Idk what a good accumulation value is
+        while (tCurrent < tFar && alphaAccum < alphaAcumLimit) {
             Vec3 pos = cameraPos + rayDir * tCurrent;
 
             // Convert to volume indices
@@ -116,7 +110,7 @@ __global__ void raycastKernel(float*  volumeData, unsigned char* framebuffer, in
             Vec3 baseColor = Vec3(density, 0.1f*density, 1.f - density);  // TODO: Implement a proper transfer function
 
             // If density ~ 0, skip shading
-            if (density > 0.001f) {
+            if (density > minAllowedDensity) {
                 Vec3 grad = computeGradient(volumeData, d_volumeWidth, d_volumeHeight, d_volumeDepth, ix, iy, iz);
                 Vec3 normal = -grad.normalize();
 
@@ -153,17 +147,16 @@ __global__ void raycastKernel(float*  volumeData, unsigned char* framebuffer, in
     framebuffer[fbIndex + 2] = (unsigned char)(fminf(accumB, 1.f) * 255);
 }
 
-void getTemperature(std::vector<float>& temperatureData) {
+void getTemperature(std::vector<float>& temperatureData, int idx = 0) {
     std::string path = "data/trimmed";
     std::string variable = "T";
     DataReader dataReader(path, variable);
-    int idx = 5;
     size_t dataLength = dataReader.fileLength(idx);
     temperatureData.resize(dataLength);
     dataReader.loadFile(temperatureData.data(), idx);
 }
 
-void getSpeed(std::vector<float>& speedData) {
+void getSpeed(std::vector<float>& speedData, int idx = 0) {
     std::string path = "data/trimmed";
     std::string varU = "U";
     std::string varV = "V";
@@ -171,7 +164,6 @@ void getSpeed(std::vector<float>& speedData) {
     DataReader dataReaderU(path, varU);
     DataReader dataReaderV(path, varV);
 
-    int idx = 50;
     size_t dataLength = dataReaderU.fileLength(idx);
     speedData.resize(dataLength);
     std::vector<float> uData(dataLength);
@@ -194,10 +186,10 @@ int main(int argc, char** argv) {
     // Generate debug volume data
     float* hostVolume = new float[VOLUME_WIDTH * VOLUME_HEIGHT * VOLUME_DEPTH];
     // generateVolume(hostVolume, VOLUME_WIDTH, VOLUME_HEIGHT, VOLUME_DEPTH);
-    for (int i = 0; i < VOLUME_WIDTH * VOLUME_HEIGHT * VOLUME_DEPTH; i++) {
+    for (int i = 0; i < VOLUME_WIDTH * VOLUME_HEIGHT * VOLUME_DEPTH; i++) {  // TODO: This is technically an unnecessary artifact of the old code taking in a float* instead of a std::vector
         // Discard temperatures above a small star (supposedly, missing temperature values)
         hostVolume[i] = data[i];
-        if (data[i] > 1000.0f) hostVolume[i] = 0.0f;
+        if (data[i] + epsilon >= infty) hostVolume[i] = 0.0f;
     }
 
         // Min-max normalization
