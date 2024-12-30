@@ -7,9 +7,8 @@
 #include "shading.h"
 
 
-
 // Raycast + phong, TODO: Consider wrapping in a class
-__global__ void raycastKernel(float* volumeData, unsigned char* framebuffer, int d_volumeWidth, int d_volumeHeight, int d_volumeDepth) {
+__global__ void raycastKernel(float* volumeData, unsigned char* framebuffer) {
     int px = blockIdx.x * blockDim.x + threadIdx.x;
     int py = blockIdx.y * blockDim.y + threadIdx.y;
     if (px >= IMAGE_WIDTH || py >= IMAGE_HEIGHT) return;
@@ -30,9 +29,9 @@ __global__ void raycastKernel(float* volumeData, unsigned char* framebuffer, int
         v *= tanHalfFov;
 
         // Find ray direction
-        Vec3 cameraRight = (cameraDir.cross(cameraUp)).normalize();
-        cameraUp = (cameraRight.cross(cameraDir)).normalize();
-        Vec3 rayDir = (cameraDir + cameraRight*u + cameraUp*v).normalize();
+        Vec3 cameraRight = (d_cameraDir.cross(d_cameraUp)).normalize();
+        d_cameraUp = (cameraRight.cross(d_cameraDir)).normalize();
+        Vec3 rayDir = (d_cameraDir + cameraRight*u + d_cameraUp*v).normalize();
 
         // Intersect (for simplicity just a 3D box from 0 to 1 in all dimensions) - TODO: Think about whether this is the best way to do this
         float tNear = 0.0f;
@@ -56,9 +55,9 @@ __global__ void raycastKernel(float* volumeData, unsigned char* framebuffer, int
             }
         };
 
-        intersectAxis(cameraPos.x, rayDir.x);
-        intersectAxis(cameraPos.y, rayDir.y);
-        intersectAxis(cameraPos.z, rayDir.z);
+        intersectAxis(d_cameraPos.x, rayDir.x);
+        intersectAxis(d_cameraPos.y, rayDir.y);
+        intersectAxis(d_cameraPos.z, rayDir.z);
 
         if (tNear > tFar) continue;  // No intersectionn
         if (tNear < 0.0f) tNear = 0.0f;
@@ -68,30 +67,30 @@ __global__ void raycastKernel(float* volumeData, unsigned char* framebuffer, int
 
         float tCurrent = tNear;
         while (tCurrent < tFar && alphaAccum < alphaAcumLimit) {
-            Point3 pos = cameraPos + rayDir * tCurrent;
+            Point3 pos = d_cameraPos + rayDir * tCurrent;
 
             // Convert to volume indices
-            float fx = pos.x * (d_volumeWidth  - 1);
-            float fy = pos.y * (d_volumeHeight - 1);
-            float fz = pos.z * (d_volumeDepth  - 1);
+            float fx = pos.x * (VOLUME_WIDTH  - 1);
+            float fy = pos.y * (VOLUME_HEIGHT - 1);
+            float fz = pos.z * (VOLUME_DEPTH  - 1);
             int ix = (int)roundf(fx);
             int iy = (int)roundf(fy);
             int iz = (int)roundf(fz);
 
             // Sample
-            float density = sampleVolumeNearest(volumeData, d_volumeWidth, d_volumeHeight, d_volumeDepth, ix, iy, iz);
+            float density = sampleVolumeNearest(volumeData, VOLUME_WIDTH, VOLUME_HEIGHT, VOLUME_DEPTH, ix, iy, iz);
 
             // Basic transfer function. TODO: Move to a separate file, and then improve
             float alphaSample = density * 0.1f;
             // float alphaSample = 1.0f - expf(-density * 0.1f);
-            Color3 baseColor = Color3(density, 0.1f*density, 1.f - density);  // TODO: Implement a proper transfer function
+            Color3 baseColor = Color3::init(density, 0.1f*density, 1.f - density);  // TODO: Implement a proper transfer function
 
             // If density ~ 0, skip shading
             if (density > minAllowedDensity) {
-                Vec3 grad = computeGradient(volumeData, d_volumeWidth, d_volumeHeight, d_volumeDepth, ix, iy, iz);
+                Vec3 grad = computeGradient(volumeData, VOLUME_WIDTH, VOLUME_HEIGHT, VOLUME_DEPTH, ix, iy, iz);
                 Vec3 normal = -grad.normalize();
 
-                Vec3 lightDir = (lightPos - pos).normalize();
+                Vec3 lightDir = (d_lightPos - pos).normalize();
                 Vec3 viewDir  = -rayDir.normalize();
 
                 // Apply Phong
