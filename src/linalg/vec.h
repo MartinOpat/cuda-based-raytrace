@@ -26,3 +26,4 @@ struct Vec3 {  // TODO: Maybe make this into a class
 };
 
 typedef Vec3 Point3;
+typedef Vec3 Color3;
