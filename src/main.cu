@@ -7,7 +7,6 @@
 
 #include "hurricanedata/datareader.h"
 #include "linalg/linalg.h" 
-#include "objs/sphere.h"
 #include "img/handler.h"
 #include "consts.h"
 #include "illumination/illumination.h"
@@ -46,7 +45,8 @@ void getSpeed(std::vector<float>& speedData, int idx = 0) {
     }
 }
 
-int main(int argc, char** argv) {
+// TODO: incorporate this main into main.cpp
+int unmain(int argc, char** argv) {
     std::vector<float> data;
     // getTemperature(data);
     getSpeed(data);
@@ -83,16 +83,17 @@ int main(int argc, char** argv) {
     // Copy external constants from consts.h to cuda
     copyConstantsToDevice();
 
-    // Launch kernel
-    dim3 blockSize(16, 16);  // TODO: Figure out a good size for parallelization
-    dim3 gridSize((IMAGE_WIDTH + blockSize.x - 1)/blockSize.x,
-                  (IMAGE_HEIGHT + blockSize.y - 1)/blockSize.y);
-
-    raycastKernel<<<gridSize, blockSize>>>(
-        d_volume,
-        d_framebuffer
-    );
-    cudaDeviceSynchronize();
+    // NOTE: this shold be done within the rayTracer class
+    // // Launch kernel
+    // dim3 blockSize(16, 16);  
+    // dim3 gridSize((IMAGE_WIDTH + blockSize.x - 1)/blockSize.x,
+    //               (IMAGE_HEIGHT + blockSize.y - 1)/blockSize.y);
+    //
+    // raycastKernel<<<gridSize, blockSize>>>(
+    //     d_volume,
+    //     d_framebuffer
+    // );
+    // cudaDeviceSynchronize();
 
     // Copy framebuffer back to CPU
     unsigned char* hostFramebuffer = new unsigned char[IMAGE_WIDTH * IMAGE_HEIGHT * 3];

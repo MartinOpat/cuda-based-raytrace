@@ -9,8 +9,8 @@ const int VOLUME_WIDTH  = 49;
 const int VOLUME_HEIGHT = 51;
 const int VOLUME_DEPTH  = 42;
 
-const int IMAGE_WIDTH   = 2560;
-const int IMAGE_HEIGHT  = 1440;
+const int IMAGE_WIDTH   = 800;
+const int IMAGE_HEIGHT  = 600;
 
 const double epsilon = 1e-10f;
 const double infty   = 1e15f;  // This vlalue is used to represent missing values in data

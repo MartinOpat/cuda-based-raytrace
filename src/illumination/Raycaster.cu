@@ -1,14 +1,16 @@
-#ifndef RAYCASTER_H
-#define RAYCASTER_H
+#include "Raycaster.h"
 
-#include <cuda_runtime.h>
+#include "cuda_runtime.h"
+#include "device_launch_parameters.h"
+
 #include "linalg/linalg.h"
 #include "consts.h"
 #include "shading.h"
+#include <iostream>
+#include "objs/sphere.h"
 
 
-// Raycast + phong, TODO: Consider wrapping in a class
-__global__ void raycastKernel(float* volumeData, unsigned char* framebuffer) {
+__global__ void raycastKernel(float* volumeData, FrameBuffer framebuffer) {
     int px = blockIdx.x * blockDim.x + threadIdx.x;
     int py = blockIdx.y * blockDim.y + threadIdx.y;
     if (px >= IMAGE_WIDTH || py >= IMAGE_HEIGHT) return;
@@ -117,10 +119,109 @@ __global__ void raycastKernel(float* volumeData, unsigned char* framebuffer) {
     accumB /= (float)SAMPLES_PER_PIXEL;
 
     // Final colour
-    int fbIndex = (py * IMAGE_WIDTH + px) * 3;
-    framebuffer[fbIndex + 0] = (unsigned char)(fminf(accumR, 1.f) * 255);
-    framebuffer[fbIndex + 1] = (unsigned char)(fminf(accumG, 1.f) * 255);
-    framebuffer[fbIndex + 2] = (unsigned char)(fminf(accumB, 1.f) * 255);
+    framebuffer.writePixel(px, py, accumR, accumG, accumB);
+    // int fbIndex = (py * IMAGE_WIDTH + px) * 3;
+    // framebuffer[fbIndex + 0] = (unsigned char)(fminf(accumR, 1.f) * 255);
+    // framebuffer[fbIndex + 1] = (unsigned char)(fminf(accumG, 1.f) * 255);
+    // framebuffer[fbIndex + 2] = (unsigned char)(fminf(accumB, 1.f) * 255);
 }
 
-#endif // RAYCASTER_H
+
+Raycaster::Raycaster(cudaGraphicsResource_t resources, int w, int h) {
+	this->resources = resources;
+	this->w = h;
+	this->w = h;
+
+	this->fb = new FrameBuffer(w, h);
+
+	// camera_info = CameraInfo(Vec3(0.0f, 0.0f, 0.0f), Vec3(0.0f, 0.0f, 0.0f), 90.0f, (float) w, (float) h);
+	// d_camera = thrust::device_new<Camera*>();
+
+	int res = cudaDeviceSynchronize();
+  if (res) {
+    std::cout << "CUDA error while synchronizing device: " << res;
+    cudaDeviceReset();
+    exit(1);
+  }
+
+  res = cudaDeviceSynchronize();
+  if (res) {
+    std::cout << "CUDA error while synchronizing device: " << res;
+    cudaDeviceReset();
+    exit(1);
+  }
+}
+
+
+void Raycaster::render() {
+  int res = cudaGraphicsMapresources(1, this->resources);
+  if (res) {
+    std::cout << "CUDA error while mapping graphic resource: " << res;
+    cudaDeviceReset();
+    exit(1);
+  }
+
+	// check_cuda_errors(cudaGraphicsResourceGetMappedPointer((void**)&(frame_buffer->device_ptr), &(frame_buffer->buffer_size), resources));
+  res = cudaGraphicsResourceGetMappedPointer((void**)(this->fb->buffer), &this->fb->buffer_size, this->resources);
+  if (res) {
+    std::cout << "CUDA error while fetching resource pointer: " << res;
+    cudaDeviceReset();
+    exit(1);
+  }
+
+  // FIXME: might not be the best parallelization configuraiton
+	int tx = 32;
+	int ty = 32;
+
+	dim3 blocks(this->w / tx + 1, this->h / ty + 1);
+	dim3 threads(tx, ty);
+
+  // TODO: pass camera info at some point
+  // TODO: pass float volume data.
+	// frame buffer is implicitly copied to the device each frame
+  raycastKernel<<<blocks, threads>>> (nullptr, this->fb);
+
+  res = cudaGetLastError();
+  if (res) {
+    std::cout << "CUDA error while raycasting: " << res;
+    cudaDeviceReset();
+    exit(1);
+  }
+
+  res = cudaDeviceSynchronize();
+  if (res) {
+    std::cout << "CUDA error while synchronizing device: " << res;
+    cudaDeviceReset();
+    exit(1);
+  }
+
+  res = cudaGraphicsUnmapResources(1, &this->resources);
+  if (res) {
+    std::cout << "CUDA error while unmapping a resource: " << res;
+    cudaDeviceReset();
+    exit(1);
+  }
+}
+
+
+void Raycaster::resize(int w, int h) {
+  this->w = w;
+  this->h = h;
+
+  delete fb;  
+  this->fb = new FrameBuffer(w, h);
+
+  // TODO: should be globals probably
+	int tx = 8;
+	int ty = 8;
+
+	dim3 blocks(w / tx + 1, h / ty + 1);
+	dim3 threads(tx, ty);
+
+  int res = cudaDeviceSynchronize();
+  if (res != 0) {
+    std::cout << "CUDA error while synchronizing device: " << res;
+    cudaDeviceReset();
+    exit(1);
+  }
+}
