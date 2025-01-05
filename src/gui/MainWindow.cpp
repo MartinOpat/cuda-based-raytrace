@@ -3,9 +3,11 @@
 #include <iostream>
 #include <memory>
 
+#include "Shader.h"
+
 Window::Window(unsigned int w, unsigned int h) {
-  Window::w = w;
-  Window::h = h;
+  this->w = w;
+  this->h = h;
 }
 
 void framebuffer_size_callback(GLFWwindow* window, int w, int h) {
@@ -16,7 +18,7 @@ void framebuffer_size_callback(GLFWwindow* window, int w, int h) {
 
 }
 
-int Window::init() {
+int Window::init(float* data) {
   // init glfw
   glfwInit();
   // requesting context version 1.0 makes glfw try to provide the latest version if possible
@@ -25,7 +27,7 @@ int Window::init() {
 
   this->window = glfwCreateWindow(this->w, this->h, "CUDA ray tracing", NULL, NULL);
 
-  //hide cursor
+  //hide cursor // TODO: switch from this style input to something more resembling an actual gui
   glfwSetInputMode(this->window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
   glfwSetWindowUserPointer(this->window, reinterpret_cast<void*>(this));
 
@@ -37,20 +39,17 @@ int Window::init() {
 
 	glfwMakeContextCurrent(this->window);
 
-
   // init glad(opengl)
   if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
     std::cout << "Failed to initialize GLAD\n";
     return -1;
   }
 
-
   // init framebuffer
   glViewport(0, 0, this->w, this->h);
   if (glfwSetFramebufferSizeCallback(this->window, framebuffer_size_callback) != 0) return -1;
 
-
-  if (init_quad()) return -1;
+  if (init_quad(data)) return -1;
 	this->last_frame = std::chrono::steady_clock::now();
 
   while (!glfwWindowShouldClose(window)) {
@@ -62,11 +61,14 @@ int Window::init() {
 }
 
 
-int Window::init_quad() {
+int Window::init_quad(float* data) {
   this->current_quad = std::make_unique<Quad>(this->w, this->h);
-  this->current_quad->cuda_init();
+  this->current_quad->cuda_init(data);
+  this->current_quad->make_fbo();
 
-  // TODO: default shaders
+  this->shader = std::make_unique<Shader>("./shaders/vertshader.glsl", "./shaders/fragshader.glsl");
+  this->shader->use();
+
   return 0;
 }
 
@@ -107,6 +109,7 @@ void Window::tick() {
   // render frame
 	glBindFramebuffer(GL_FRAMEBUFFER, this->current_quad->fb);
 	this->current_quad->render();
+  this->shader->use();
 	glBindVertexArray(this->current_quad->VAO);
 	glBindTexture(GL_TEXTURE_2D, this->current_quad->tex);
 	glDrawArrays(GL_TRIANGLES, 0, 6); // draw current frame to texture
@@ -115,6 +118,8 @@ void Window::tick() {
   // + swap buffers; TODO: check if necessary?
 	glfwSwapBuffers(this->window);
 	glfwPollEvents();
+
+  std::cout << "done ticking";
   
 }
 

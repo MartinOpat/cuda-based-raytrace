@@ -10,6 +10,7 @@
 #include "objs/sphere.h"
 
 
+// TODO: instead of IMAGEWIDTH and IMAGEHEIGHT this should reflect the windowSize;
 __global__ void raycastKernel(float* volumeData, FrameBuffer framebuffer) {
     int px = blockIdx.x * blockDim.x + threadIdx.x;
     int py = blockIdx.y * blockDim.y + threadIdx.y;
@@ -41,7 +42,7 @@ __global__ void raycastKernel(float* volumeData, FrameBuffer framebuffer) {
         auto intersectAxis = [&](float start, float dirVal) {
             if (fabsf(dirVal) < epsilon) {
                 if (start < 0.f || start > 1.f) {
-                    tNear = 1e9f;
+                   tNear = 1e9f;
                     tFar  = -1e9f;
                 }
             } else {
@@ -127,12 +128,13 @@ __global__ void raycastKernel(float* volumeData, FrameBuffer framebuffer) {
 }
 
 
-Raycaster::Raycaster(cudaGraphicsResource_t resources, int w, int h) {
+Raycaster::Raycaster(cudaGraphicsResource_t resources, int w, int h, float* data) {
 	this->resources = resources;
 	this->w = h;
 	this->w = h;
 
 	this->fb = new FrameBuffer(w, h);
+  this->data = data;
 
 	// camera_info = CameraInfo(Vec3(0.0f, 0.0f, 0.0f), Vec3(0.0f, 0.0f, 0.0f), 90.0f, (float) w, (float) h);
 	// d_camera = thrust::device_new<Camera*>();
@@ -154,15 +156,14 @@ Raycaster::Raycaster(cudaGraphicsResource_t resources, int w, int h) {
 
 
 void Raycaster::render() {
-  int res = cudaGraphicsMapresources(1, this->resources);
+  int res = cudaGraphicsMapResources(1, &this->resources);
   if (res) {
     std::cout << "CUDA error while mapping graphic resource: " << res;
     cudaDeviceReset();
     exit(1);
   }
 
-	// check_cuda_errors(cudaGraphicsResourceGetMappedPointer((void**)&(frame_buffer->device_ptr), &(frame_buffer->buffer_size), resources));
-  res = cudaGraphicsResourceGetMappedPointer((void**)(this->fb->buffer), &this->fb->buffer_size, this->resources);
+	res = cudaGraphicsResourceGetMappedPointer((void**)&(this->fb->buffer), &(this->fb->buffer_size), resources);
   if (res) {
     std::cout << "CUDA error while fetching resource pointer: " << res;
     cudaDeviceReset();
@@ -177,13 +178,12 @@ void Raycaster::render() {
 	dim3 threads(tx, ty);
 
   // TODO: pass camera info at some point
-  // TODO: pass float volume data.
 	// frame buffer is implicitly copied to the device each frame
-  raycastKernel<<<blocks, threads>>> (nullptr, this->fb);
+  raycastKernel<<<blocks, threads>>> (this->data, *this->fb);
 
-  res = cudaGetLastError();
-  if (res) {
-    std::cout << "CUDA error while raycasting: " << res;
+  cudaError_t err = cudaGetLastError();
+  if (err) {
+    std::cout << "CUDA error while raycasting: " << cudaGetErrorString(err);
     cudaDeviceReset();
     exit(1);
   }

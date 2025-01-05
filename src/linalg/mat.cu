@@ -34,13 +34,13 @@ __device__ unsigned int packUnorm4x8(float r, float g, float b, float a) {
 	  uint out;
 	} u;
 
-  double len = sqrt(r*r + g*g + b*b + a*a);
+  float len = sqrtf(r*r + g*g + b*b + a*a);
 
   // This is a Vec4 but i can't be bothered to make that its own struct/class; FIXME: maybe do that if we need to?
-  std::vector<float> v{r/len, g/len, b/len, a/len};
-  for (int i = 0; i < v.size(); i++) {
-    u.in[i] = round(std::clamp(v[i], 0.0f, 1.0f) * 255.0f);
-  }
+  u.in[0] = round(r/len * 255.0f);
+  u.in[1] = round(g/len * 255.0f);
+  u.in[2] = round(b/len * 255.0f);
+  u.in[3] = round(a/len * 255.0f);
 
 	return u.out;
 }

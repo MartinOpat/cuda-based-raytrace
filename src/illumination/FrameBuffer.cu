@@ -2,7 +2,9 @@
 #include "linalg/linalg.h"
 
 
-__host__ FrameBuffer::FrameBuffer(unsigned int w, unsigned int h) : w(w), h(h) {}
+__host__ FrameBuffer::FrameBuffer(unsigned int w, unsigned int h) : w(w), h(h) {
+  this->buffer_size = w*h*4;
+}
 
 
 __device__ void FrameBuffer::writePixel(int x, int y, float r, float g, float b) {

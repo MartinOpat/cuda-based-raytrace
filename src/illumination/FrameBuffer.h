@@ -8,7 +8,7 @@
 
 class FrameBuffer {
 public:
-  uint32_t* buffer;
+  unsigned int* buffer;
   std::size_t buffer_size;
   unsigned int w;
   unsigned int h;

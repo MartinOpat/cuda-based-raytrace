@@ -61,13 +61,14 @@ Quad::Quad(unsigned int w, unsigned int h) {
   glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, w, h, 0, GL_BGRA, GL_UNSIGNED_BYTE, NULL);
   glBindTexture(GL_TEXTURE_2D, 0);
 
-  // register the FBO
+};
+
+void Quad::make_fbo(){
   glGenFramebuffers(1, &fb);
   glBindFramebuffer(GL_FRAMEBUFFER, fb);
   glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, this->tex, 0);
   glBindFramebuffer(GL_FRAMEBUFFER, 0);
-};
-
+}
 
 Quad::~Quad() {
   int res = cudaGraphicsUnregisterResource(CGR);
@@ -79,14 +80,14 @@ Quad::~Quad() {
 };
 
 
-void Quad::cuda_init() {
+void Quad::cuda_init(float* data) {
   int res = cudaGraphicsGLRegisterBuffer(&this->CGR, this->PBO, cudaGraphicsRegisterFlagsNone); 
   if (res) {
     std::cout << "CUDA error while registering the graphics resource: " << res;
     cudaDeviceReset();
     exit(1);
   }
-  this->renderer = std::make_unique<Raycaster>(this->CGR, this->w, this->h);
+  this->renderer = std::make_unique<Raycaster>(this->CGR, this->w, this->h, data);
 };
 
 

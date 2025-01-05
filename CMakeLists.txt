@@ -5,6 +5,8 @@ project ("cuda-raytracer" LANGUAGES CUDA CXX C)
 # get the shader files in the build directory
 file(COPY ${CMAKE_SOURCE_DIR}/src/gui/shaders DESTINATION .)
 
+set(CMAKE_BUILD_TYPE Debug)
+
 # source files
 file(GLOB_RECURSE SOURCE_FILES 
 	${CMAKE_SOURCE_DIR}/src/*.c

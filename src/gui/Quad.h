@@ -30,7 +30,8 @@ public:
 
   void render();
   void resize(unsigned int w, unsigned int h);
-  void cuda_init();
+  void cuda_init(float* data);
+  void make_fbo();
 
 };
 #endif // QUAD_H
