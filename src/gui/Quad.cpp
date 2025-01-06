@@ -1,5 +1,6 @@
 #include "Quad.h"
 
+#include "cuda_error.h"
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 #include "cuda_runtime.h"
@@ -71,22 +72,12 @@ void Quad::make_fbo(){
 }
 
 Quad::~Quad() {
-  int res = cudaGraphicsUnregisterResource(CGR);
-  if (res) {
-    std::cout << "CUDA error while deregistering the graphics resource: " << res;
-    cudaDeviceReset();
-    exit(1);
-  }
+  check_cuda_errors(cudaGraphicsUnregisterResource(CGR));
 };
 
 
 void Quad::cuda_init(float* data) {
-  int res = cudaGraphicsGLRegisterBuffer(&this->CGR, this->PBO, cudaGraphicsRegisterFlagsNone); 
-  if (res) {
-    std::cout << "CUDA error while registering the graphics resource: " << res;
-    cudaDeviceReset();
-    exit(1);
-  }
+  check_cuda_errors(cudaGraphicsGLRegisterBuffer(&this->CGR, this->PBO, cudaGraphicsRegisterFlagsNone));
   this->renderer = std::make_unique<Raycaster>(this->CGR, this->w, this->h, data);
 };
 
@@ -117,21 +108,10 @@ void Quad::resize(unsigned int w, unsigned int h) {
   glBindFramebuffer(GL_FRAMEBUFFER, 0);    
 
   if (this->renderer != nullptr) {
-    // TODO: probably make a function for the cuda error checking
-    int res = cudaGraphicsUnregisterResource(CGR);
-    if (res) {
-      std::cout << "CUDA error while deregistering the graphics resource: " << res;
-      cudaDeviceReset();
-      exit(1);
-    }
+    check_cuda_errors(cudaGraphicsUnregisterResource(CGR));
+    check_cuda_errors(cudaGraphicsGLRegisterBuffer(&this->CGR, this->PBO, cudaGraphicsRegisterFlagsNone));
 
-    res = cudaGraphicsGLRegisterBuffer(&this->CGR, this->PBO, cudaGraphicsRegisterFlagsNone); 
-    if (res) {
-      std::cout << "CUDA error while registering the graphics resource: " << res;
-      cudaDeviceReset();
-      exit(1);
-    }
-      this->renderer->resources = this->CGR;
-      this->renderer->resize(w, h);
+    this->renderer->resources = this->CGR;
+    this->renderer->resize(w, h);
   }
 };

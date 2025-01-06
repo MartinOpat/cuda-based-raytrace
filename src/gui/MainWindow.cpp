@@ -119,7 +119,7 @@ void Window::tick() {
 	glfwSwapBuffers(this->window);
 	glfwPollEvents();
 
-  std::cout << "done ticking";
+  std::cout << "done ticking\n";
   
 }
 

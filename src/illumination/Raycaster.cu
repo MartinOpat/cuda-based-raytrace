@@ -5,6 +5,7 @@
 
 #include "linalg/linalg.h"
 #include "consts.h"
+#include "cuda_error.h"
 #include "shading.h"
 #include <iostream>
 #include "objs/sphere.h"
@@ -130,8 +131,8 @@ __global__ void raycastKernel(float* volumeData, FrameBuffer framebuffer) {
 
 Raycaster::Raycaster(cudaGraphicsResource_t resources, int w, int h, float* data) {
 	this->resources = resources;
-	this->w = h;
-	this->w = h;
+	this->w = w;
+	this->h = h;
 
 	this->fb = new FrameBuffer(w, h);
   this->data = data;
@@ -139,68 +140,27 @@ Raycaster::Raycaster(cudaGraphicsResource_t resources, int w, int h, float* data
 	// camera_info = CameraInfo(Vec3(0.0f, 0.0f, 0.0f), Vec3(0.0f, 0.0f, 0.0f), 90.0f, (float) w, (float) h);
 	// d_camera = thrust::device_new<Camera*>();
 
-	int res = cudaDeviceSynchronize();
-  if (res) {
-    std::cout << "CUDA error while synchronizing device: " << res;
-    cudaDeviceReset();
-    exit(1);
-  }
-
-  res = cudaDeviceSynchronize();
-  if (res) {
-    std::cout << "CUDA error while synchronizing device: " << res;
-    cudaDeviceReset();
-    exit(1);
-  }
+	check_cuda_errors(cudaDeviceSynchronize());
 }
 
 
 void Raycaster::render() {
-  int res = cudaGraphicsMapResources(1, &this->resources);
-  if (res) {
-    std::cout << "CUDA error while mapping graphic resource: " << res;
-    cudaDeviceReset();
-    exit(1);
-  }
-
-	res = cudaGraphicsResourceGetMappedPointer((void**)&(this->fb->buffer), &(this->fb->buffer_size), resources);
-  if (res) {
-    std::cout << "CUDA error while fetching resource pointer: " << res;
-    cudaDeviceReset();
-    exit(1);
-  }
+  check_cuda_errors(cudaGraphicsMapResources(1, &this->resources));
+	check_cuda_errors(cudaGraphicsResourceGetMappedPointer((void**)&(this->fb->buffer), &(this->fb->buffer_size), resources));
 
   // FIXME: might not be the best parallelization configuraiton
-	int tx = 32;
-	int ty = 32;
-
-	dim3 blocks(this->w / tx + 1, this->h / ty + 1);
-	dim3 threads(tx, ty);
+	int tx = 16;
+	int ty = 16;
+	dim3 threadSize(this->w / tx + 1, this->h / ty + 1);
+	dim3 blockSize(tx, ty);
 
   // TODO: pass camera info at some point
 	// frame buffer is implicitly copied to the device each frame
-  raycastKernel<<<blocks, threads>>> (this->data, *this->fb);
+  raycastKernel<<<threadSize, blockSize>>> (this->data, *this->fb);
 
-  cudaError_t err = cudaGetLastError();
-  if (err) {
-    std::cout << "CUDA error while raycasting: " << cudaGetErrorString(err);
-    cudaDeviceReset();
-    exit(1);
-  }
-
-  res = cudaDeviceSynchronize();
-  if (res) {
-    std::cout << "CUDA error while synchronizing device: " << res;
-    cudaDeviceReset();
-    exit(1);
-  }
-
-  res = cudaGraphicsUnmapResources(1, &this->resources);
-  if (res) {
-    std::cout << "CUDA error while unmapping a resource: " << res;
-    cudaDeviceReset();
-    exit(1);
-  }
+  check_cuda_errors(cudaGetLastError());
+  check_cuda_errors(cudaDeviceSynchronize());
+  check_cuda_errors(cudaGraphicsUnmapResources(1, &this->resources));
 }
 
 
@@ -218,10 +178,5 @@ void Raycaster::resize(int w, int h) {
 	dim3 blocks(w / tx + 1, h / ty + 1);
 	dim3 threads(tx, ty);
 
-  int res = cudaDeviceSynchronize();
-  if (res != 0) {
-    std::cout << "CUDA error while synchronizing device: " << res;
-    cudaDeviceReset();
-    exit(1);
-  }
+  check_cuda_errors(cudaDeviceSynchronize());
 }
