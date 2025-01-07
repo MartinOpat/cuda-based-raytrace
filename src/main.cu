@@ -18,7 +18,6 @@ static float* d_volume = nullptr;
 // * pass camera_info to the raycasting function - updated according to glfw.
 // * on that note, code for handling input (mouse movement certainly, possibly free input / 4 pre-coded views, q/esc to quit, space for pause (would be were the 'simple' render idea would come in))
 // * very similarly - actual code for loading new data as the simulation progresses - right now its effectively a static image loader
-// * better cleanup; im sure im missing a bunch of frees that really should be there.
 
 void getTemperature(std::vector<float>& temperatureData, int idx = 0) {
     std::string path = "data/trimmed";
@@ -101,7 +100,9 @@ int main() {
   // cudaDeviceSynchronize();
 
   Window window(IMAGE_WIDTH, IMAGE_HEIGHT);
-  return window.init(d_volume);
+  int out = window.init(d_volume);
+
+  cudaFree(d_volume);
 
   // // Copy framebuffer back to CPU
   // unsigned char* hostFramebuffer = new unsigned char[IMAGE_WIDTH * IMAGE_HEIGHT * 3];
@@ -111,11 +112,12 @@ int main() {
   // saveImage("output.ppm", hostFramebuffer, IMAGE_WIDTH, IMAGE_HEIGHT);
   //
   // // Cleanup //TODO: cleanup properly
-  // delete[] hostVolume;
+  delete[] hostVolume;
   // delete[] hostFramebuffer;
   // cudaFree(d_volume);
   // cudaFree(d_framebuffer);
   //
   // std::cout << "Phong-DVR rendering done. Image saved to output.ppm" << std::endl;
   // return 0;
+  return out;
 }
