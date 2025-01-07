@@ -168,7 +168,7 @@ void Raycaster::resize(int w, int h) {
   this->w = w;
   this->h = h;
 
-  delete fb;  
+  delete this->fb;  
   this->fb = new FrameBuffer(w, h);
 
   // TODO: should be globals probably

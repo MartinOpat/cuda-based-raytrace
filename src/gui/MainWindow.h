@@ -17,7 +17,7 @@ public:
   Window(unsigned int w, unsigned int h);
 
   int init(float* data);
-  void free();
+  void free(float* data);
   void resize(unsigned int w, unsigned int h);
 
 private:
