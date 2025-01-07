@@ -1,22 +1,12 @@
 # cuda-based-raytrace
 
 ## How to run
-If necessary clean previous build:
-```bash
-make clean
-```
 
-Then build (currently always debug build):
+Gui branch was a bit easier to compile using Cmake so to run this branch do:
 ```bash
-make all
-```
-
-Run:
-```bash
-./build/main
-```
-
-To open the resulting image you can use (Ubuntu):
-```bash
-xdg-open output.ppm
+mkdir build
+cd build
+cmake ..
+make 
+./cuda-raytracer
 ```
