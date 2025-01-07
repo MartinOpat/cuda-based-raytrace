@@ -63,9 +63,9 @@ int Window::init(float* data) {
 
 
 int Window::init_quad(float* data) {
-  this->current_quad = std::make_unique<Quad>(this->w, this->h);
-  this->current_quad->cuda_init(data);
-  this->current_quad->make_fbo();
+  this->quad = std::make_unique<Quad>(this->w, this->h);
+  this->quad->cuda_init(data);
+  this->quad->make_fbo();
 
   this->shader = std::make_unique<Shader>("./shaders/vertshader.glsl", "./shaders/fragshader.glsl");
   this->shader->use();
@@ -78,7 +78,7 @@ int Window::init_quad(float* data) {
 void Window::free(float* data) {
   // To preserve the proper destruction order we forcefully set the quads to null (calling their destructor in the process)
   // Not strictly necessary, but i saw some weird errors on exit without this so best to keep it in.
-  this->current_quad = nullptr;
+  this->quad = nullptr;
   cudaFree(data);
 
   glfwDestroyWindow(window);
@@ -106,10 +106,10 @@ void Window::tick() {
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 	glDisable(GL_DEPTH_TEST);
 
-	this->current_quad->render();
+	this->quad->render();
   this->shader->use();
-	glBindVertexArray(this->current_quad->VAO);
-	glBindTexture(GL_TEXTURE_2D, this->current_quad->tex);
+	glBindVertexArray(this->quad->VAO);
+	glBindTexture(GL_TEXTURE_2D, this->quad->tex);
 	glDrawArrays(GL_TRIANGLES, 0, 6); // draw current frame to texture
   
   // check for events
@@ -121,5 +121,5 @@ void Window::tick() {
 void Window::resize(unsigned int w, unsigned int h) {
   this->w = w;
   this->h = h;
-  this->current_quad->resize(w, h);
+  this->quad->resize(w, h);
 }

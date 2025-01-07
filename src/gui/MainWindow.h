@@ -22,7 +22,7 @@ public:
 
 private:
   GLFWwindow* window;
-  std::unique_ptr<Quad> current_quad;
+  std::unique_ptr<Quad> quad;
 
 	std::chrono::steady_clock::time_point last_frame;
 
