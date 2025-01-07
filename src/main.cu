@@ -14,6 +14,11 @@
 
 static float* d_volume = nullptr;
 
+// TODO: general
+// * pass camera_info to the raycasting function - updated according to glfw.
+// * on that note, code for handling input (mouse movement certainly, possibly free input / 4 pre-coded views, q/esc to quit, space for pause (would be were the 'simple' render idea would come in))
+// * very similarly - actual code for loading new data as the simulation progresses - right now its effectively a static image loader
+// 
 
 void getTemperature(std::vector<float>& temperatureData, int idx = 0) {
     std::string path = "data/trimmed";

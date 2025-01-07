@@ -70,6 +70,7 @@ int Window::init_quad(float* data) {
   this->shader = std::make_unique<Shader>("./shaders/vertshader.glsl", "./shaders/fragshader.glsl");
   this->shader->use();
 
+	glUniform1i(glGetUniformLocation(this->shader->ID, "currentFrameTex"), 0);
   return 0;
 }
 
@@ -105,11 +106,6 @@ void Window::tick() {
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 	glDisable(GL_DEPTH_TEST);
 
-	glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
-	glClear(GL_COLOR_BUFFER_BIT);
-
-  // render frame
-	glBindFramebuffer(GL_FRAMEBUFFER, this->current_quad->fb);
 	this->current_quad->render();
   this->shader->use();
 	glBindVertexArray(this->current_quad->VAO);
@@ -117,12 +113,9 @@ void Window::tick() {
 	glDrawArrays(GL_TRIANGLES, 0, 6); // draw current frame to texture
   
   // check for events
-  // + swap buffers; TODO: check if necessary?
 	glfwSwapBuffers(this->window);
 	glfwPollEvents();
 
-  std::cout << "done ticking\n";
-  
 }
 
 void Window::resize(unsigned int w, unsigned int h) {

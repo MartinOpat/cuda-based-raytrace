@@ -67,7 +67,7 @@ Quad::Quad(unsigned int w, unsigned int h) {
 void Quad::make_fbo(){
   glGenFramebuffers(1, &fb);
   glBindFramebuffer(GL_FRAMEBUFFER, fb);
-  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, this->tex, 0);
+  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, tex, 0);
   glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
@@ -85,8 +85,8 @@ void Quad::cuda_init(float* data) {
 void Quad::render() {
   glBindTexture(GL_TEXTURE_2D, 0);
   this->renderer->render(); 
-  glBindBuffer(GL_PIXEL_UNPACK_BUFFER, this->PBO);
   glBindTexture(GL_TEXTURE_2D, this->tex);
+  glBindBuffer(GL_PIXEL_UNPACK_BUFFER, this->PBO);
   glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, this->w, this->h, GL_BGRA, GL_UNSIGNED_BYTE, NULL);
 };
 

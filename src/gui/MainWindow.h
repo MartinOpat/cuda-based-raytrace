@@ -12,7 +12,7 @@ class Window {
 public:
   unsigned int w;
   unsigned int h;
-  float* data; //TODO: dynamic data loading
+  float* data; 
 
   Window(unsigned int w, unsigned int h);
 
