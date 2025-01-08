@@ -54,8 +54,8 @@ void getSpeed(std::vector<float>& speedData, int idx = 0) {
 
 int main() {
   std::vector<float> data;
-  getTemperature(data);
-  // getSpeed(data);
+  // getTemperature(data);
+  getSpeed(data);
 
   std::cout << "DATA size: " << data.size() << std::endl;
 

@@ -10,6 +10,19 @@
 #include <iostream>
 #include "objs/sphere.h"
 
+// Samples the voxel nearest to the given coordinates. TODO: Can be re-used in other places so move
+__device__ float sampleVolumeNearest(float* volumeData, const int volW, const int volH, const int volD, int vx, int vy, int vz) {
+    if (vx < 0) vx = 0;
+    if (vy < 0) vy = 0;
+    if (vz < 0) vz = 0;
+    if (vx >= volW) vx = volW  - 1;
+    if (vy >= volH) vy = volH - 1;
+    if (vz >= volD) vz = volD  - 1;
+
+    int idx = vz * volW * volH + vy * volD + vx;
+    return volumeData[idx];
+}
+
 
 // TODO: instead of IMAGEWIDTH and IMAGEHEIGHT this should reflect the windowSize;
 __global__ void raycastKernel(float* volumeData, FrameBuffer framebuffer) {
