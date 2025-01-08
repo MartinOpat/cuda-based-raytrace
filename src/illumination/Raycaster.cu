@@ -1,14 +1,18 @@
-#ifndef RAYCASTER_H
-#define RAYCASTER_H
+#include "Raycaster.h"
 
-#include <cuda_runtime.h>
+#include "cuda_runtime.h"
+#include "device_launch_parameters.h"
+
 #include "linalg/linalg.h"
 #include "consts.h"
+#include "cuda_error.h"
 #include "shading.h"
+#include <iostream>
+#include "objs/sphere.h"
 
 
-// Raycast + phong, TODO: Consider wrapping in a class
-__global__ void raycastKernel(float* volumeData, unsigned char* framebuffer) {
+// TODO: instead of IMAGEWIDTH and IMAGEHEIGHT this should reflect the windowSize;
+__global__ void raycastKernel(float* volumeData, FrameBuffer framebuffer) {
     int px = blockIdx.x * blockDim.x + threadIdx.x;
     int py = blockIdx.y * blockDim.y + threadIdx.y;
     if (px >= IMAGE_WIDTH || py >= IMAGE_HEIGHT) return;
@@ -39,7 +43,7 @@ __global__ void raycastKernel(float* volumeData, unsigned char* framebuffer) {
         auto intersectAxis = [&](float start, float dirVal) {
             if (fabsf(dirVal) < epsilon) {
                 if (start < 0.f || start > 1.f) {
-                    tNear = 1e9f;
+                   tNear = 1e9f;
                     tFar  = -1e9f;
                 }
             } else {
@@ -117,10 +121,62 @@ __global__ void raycastKernel(float* volumeData, unsigned char* framebuffer) {
     accumB /= (float)SAMPLES_PER_PIXEL;
 
     // Final colour
-    int fbIndex = (py * IMAGE_WIDTH + px) * 3;
-    framebuffer[fbIndex + 0] = (unsigned char)(fminf(accumR, 1.f) * 255);
-    framebuffer[fbIndex + 1] = (unsigned char)(fminf(accumG, 1.f) * 255);
-    framebuffer[fbIndex + 2] = (unsigned char)(fminf(accumB, 1.f) * 255);
+    framebuffer.writePixel(px, py, accumR, accumG, accumB);
+    // int fbIndex = (py * IMAGE_WIDTH + px) * 3;
+    // framebuffer[fbIndex + 0] = (unsigned char)(fminf(accumR, 1.f) * 255);
+    // framebuffer[fbIndex + 1] = (unsigned char)(fminf(accumG, 1.f) * 255);
+    // framebuffer[fbIndex + 2] = (unsigned char)(fminf(accumB, 1.f) * 255);
 }
 
-#endif // RAYCASTER_H
+
+Raycaster::Raycaster(cudaGraphicsResource_t resources, int w, int h, float* data) {
+	this->resources = resources;
+	this->w = w;
+	this->h = h;
+
+	this->fb = new FrameBuffer(w, h);
+  this->data = data;
+
+	// camera_info = CameraInfo(Vec3(0.0f, 0.0f, 0.0f), Vec3(0.0f, 0.0f, 0.0f), 90.0f, (float) w, (float) h);
+	// d_camera = thrust::device_new<Camera*>();
+
+	check_cuda_errors(cudaDeviceSynchronize());
+}
+
+
+void Raycaster::render() {
+  check_cuda_errors(cudaGraphicsMapResources(1, &this->resources));
+	check_cuda_errors(cudaGraphicsResourceGetMappedPointer((void**)&(this->fb->buffer), &(this->fb->buffer_size), resources));
+
+  // FIXME: might not be the best parallelization configuraiton
+	int tx = 16;
+	int ty = 16;
+	dim3 threadSize(this->w / tx + 1, this->h / ty + 1);
+	dim3 blockSize(tx, ty);
+
+  // TODO: pass camera info at some point
+	// frame buffer is implicitly copied to the device each frame
+  raycastKernel<<<threadSize, blockSize>>> (this->data, *this->fb);
+
+  check_cuda_errors(cudaGetLastError());
+  check_cuda_errors(cudaDeviceSynchronize());
+  check_cuda_errors(cudaGraphicsUnmapResources(1, &this->resources));
+}
+
+
+void Raycaster::resize(int w, int h) {
+  this->w = w;
+  this->h = h;
+
+  delete this->fb;  
+  this->fb = new FrameBuffer(w, h);
+
+  // TODO: should be globals probably
+	int tx = 8;
+	int ty = 8;
+
+	dim3 blocks(w / tx + 1, h / ty + 1);
+	dim3 threads(tx, ty);
+
+  check_cuda_errors(cudaDeviceSynchronize());
+}

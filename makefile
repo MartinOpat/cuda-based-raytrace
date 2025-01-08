@@ -1,6 +1,6 @@
 # Compiler and flags
 NVCC = nvcc
-CXXFLAGS = -I./src -std=c++17 $(shell nc-config --cxx4flags) $(shell nc-config --cxx4libs) -g -G
+CXXFLAGS = -I./src -std=c++17 $(shell ncxx4-config --cflags) $(shell ncxx4-config --libs) -g -G
 COMPILE_OBJ_FLAGS = --device-c
 
 # Directories
