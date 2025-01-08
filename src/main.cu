@@ -19,29 +19,39 @@ __global__ void middleOfTwoValues(float *ans, const FieldMetadata &fmd, FieldDat
 int main() {
     std::string path = "data/atmosphere_MERRA-wind-speed[179253532]";
 
-    std::string variable = "T";
+    DataReader dataReaderU{path, "U"};
 
-    DataReader dataReader{path, variable};
+    DataReader dataReaderV{path, "V"};
 
     std::cout << "created datareader\n";
 
-    GPUBuffer buffer (dataReader);
+    GPUBuffer bufferU (dataReaderU);
+
+    GPUBuffer bufferV (dataReaderV);
 
     std::cout << "created buffer\n";
 
-    GPUBufferHandler bufferHandler(buffer);
+    GPUBufferHandler bufferHandlerU(bufferU);
+
+    GPUBufferHandler bufferHandlerV(bufferV);
 
     float *ptr_test_read;
     cudaMallocManaged(&ptr_test_read, sizeof(float));
 
     std::cout << "created buffer handler\n";
-    for (int i = 0; i < 10; i++) {
-        FieldData fd = bufferHandler.nextFieldData();
+    for (int i = 0; i < 20; i++) {
+        FieldData fdU = bufferHandlerU.nextFieldData();
+        FieldData fdV = bufferHandlerV.nextFieldData();
 
-        middleOfTwoValues<<<1, 1>>>(ptr_test_read, *bufferHandler.fmd, fd);
+        middleOfTwoValues<<<1, 1>>>(ptr_test_read, *bufferHandlerU.fmd, fdU);
 
         cudaDeviceSynchronize();
-        std::cout << "ptr_test_read = " << std::fixed << std::setprecision(6) << *ptr_test_read << "\n";
+        std::cout << "ptr_test_read U = " << std::fixed << std::setprecision(6) << *ptr_test_read << "\n";
+
+        middleOfTwoValues<<<1, 1>>>(ptr_test_read, *bufferHandlerV.fmd, fdV);
+
+        cudaDeviceSynchronize();
+        std::cout << "ptr_test_read V = " << std::fixed << std::setprecision(6) << *ptr_test_read << "\n";
     }
     
     // TODO: measure data transfer time in this example code.

@@ -48,8 +48,6 @@ public:
      */
     FieldMetadata *fmd;
 
-    static void freeFieldData();
-
 private:
     FieldData setupField(size_t endBufferInd);
     GPUBuffer& gpuBuffer;
