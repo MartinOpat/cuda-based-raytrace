@@ -20,7 +20,8 @@ static float* d_volume = nullptr;
 // * very similarly - actual code for loading new data as the simulation progresses - right now its effectively a static image loader
 
 void getTemperature(std::vector<float>& temperatureData, int idx = 0) {
-    std::string path = "data/trimmed";
+    // std::string path = "data/trimmed";
+    std::string path = "data";
     std::string variable = "T";
     DataReader dataReader(path, variable);
     size_t dataLength = dataReader.fileLength(idx);
@@ -29,7 +30,8 @@ void getTemperature(std::vector<float>& temperatureData, int idx = 0) {
 }
 
 void getSpeed(std::vector<float>& speedData, int idx = 0) {
-    std::string path = "data/trimmed";
+    // std::string path = "data/trimmed";
+    std::string path = "data";
     std::string varU = "U";
     std::string varV = "V";
 
@@ -52,9 +54,10 @@ void getSpeed(std::vector<float>& speedData, int idx = 0) {
 
 int main() {
   std::vector<float> data;
-  // getTemperature(data);
-  getSpeed(data);
+  getTemperature(data);
+  // getSpeed(data);
 
+  std::cout << "DATA size: " << data.size() << std::endl;
 
   // TODO: Eveontually remove debug below (i.e., eliminate for-loop etc.)
   // Generate debug volume data
@@ -62,13 +65,15 @@ int main() {
   // generateVolume(hostVolume, VOLUME_WIDTH, VOLUME_HEIGHT, VOLUME_DEPTH);
   for (int i = 0; i < VOLUME_WIDTH * VOLUME_HEIGHT * VOLUME_DEPTH; i++) {  // TODO: This is technically an unnecessary artifact of the old code taking in a float* instead of a std::vector
     // Discard temperatures above a small star (supposedly, missing temperature values)
-    hostVolume[i] = data[i];
-    if (data[i] + epsilon >= infty) hostVolume[i] = 0.0f;
+    hostVolume[i] = data[i + 3*VOLUME_DEPTH*VOLUME_HEIGHT*VOLUME_WIDTH];
+    if (data[i + 3*VOLUME_DEPTH*VOLUME_HEIGHT*VOLUME_WIDTH] + epsilon >= infty) hostVolume[i] = 0.0f;
   }
 
   // Min-max normalization
   float minVal = *std::min_element(hostVolume, hostVolume + VOLUME_WIDTH * VOLUME_HEIGHT * VOLUME_DEPTH);
   float maxVal = *std::max_element(hostVolume, hostVolume + VOLUME_WIDTH * VOLUME_HEIGHT * VOLUME_DEPTH);
+  std::cout << "minVal: " << minVal << " maxVal: " << maxVal << std::endl;
+
   for (int i = 0; i < VOLUME_WIDTH * VOLUME_HEIGHT * VOLUME_DEPTH; i++) {
     hostVolume[i] = (hostVolume[i] - minVal) / (maxVal - minVal);
   }

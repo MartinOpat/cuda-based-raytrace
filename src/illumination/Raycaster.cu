@@ -40,28 +40,29 @@ __global__ void raycastKernel(float* volumeData, FrameBuffer framebuffer) {
         // Intersect (for simplicity just a 3D box from 0 to 1 in all dimensions) - TODO: Think about whether this is the best way to do this
         float tNear = 0.0f;
         float tFar  = 1e6f;
-        auto intersectAxis = [&](float start, float dirVal) {
-            if (fabsf(dirVal) < epsilon) {
-                if (start < 0.f || start > 1.f) {
-                   tNear = 1e9f;
+        auto intersectAxis = [&](float start, float dir, float minV, float maxV) {
+            if (fabsf(dir) < epsilon) {
+                // Ray parallel to axis. If outside min..max, no intersection.
+                if (start < minV || start > maxV) {
+                    tNear = 1e9f;
                     tFar  = -1e9f;
                 }
             } else {
-                float t0 = (0.0f - start) / dirVal;
-                float t1 = (1.0f - start) / dirVal;
-                if (t0>t1) { 
-                    float tmp=t0; 
-                    t0=t1; 
-                    t1=tmp; 
+                float t0 = (minV - start) / dir;
+                float t1 = (maxV - start) / dir;
+                if (t0 > t1) {
+                    float tmp = t0;
+                    t0 = t1;
+                    t1 = tmp;
                 }
-                if (t0>tNear) tNear = t0;
-                if (t1<tFar ) tFar  = t1;
+                if (t0 > tNear) tNear = t0;
+                if (t1 < tFar ) tFar  = t1;
             }
         };
 
-        intersectAxis(d_cameraPos.x, rayDir.x);
-        intersectAxis(d_cameraPos.y, rayDir.y);
-        intersectAxis(d_cameraPos.z, rayDir.z);
+        intersectAxis(d_cameraPos.x, rayDir.x, 0.0f, (float)VOLUME_WIDTH);
+        intersectAxis(d_cameraPos.y, rayDir.y, 0.0f, (float)VOLUME_HEIGHT);
+        intersectAxis(d_cameraPos.z, rayDir.z, 0.0f, (float)VOLUME_DEPTH);
 
         if (tNear > tFar) continue;  // No intersectionn
         if (tNear < 0.0f) tNear = 0.0f;
@@ -74,12 +75,12 @@ __global__ void raycastKernel(float* volumeData, FrameBuffer framebuffer) {
             Point3 pos = d_cameraPos + rayDir * tCurrent;
 
             // Convert to volume indices
-            float fx = pos.x * (VOLUME_WIDTH  - 1);
-            float fy = pos.y * (VOLUME_HEIGHT - 1);
-            float fz = pos.z * (VOLUME_DEPTH  - 1);
-            int ix = (int)roundf(fx);
-            int iy = (int)roundf(fy);
-            int iz = (int)roundf(fz);
+            // float fx = pos.x * (VOLUME_WIDTH  - 1);
+            // float fy = pos.y * (VOLUME_HEIGHT - 1);
+            // float fz = pos.z * (VOLUME_DEPTH  - 1);
+            int ix = (int)roundf(pos.x);
+            int iy = (int)roundf(pos.y);
+            int iz = (int)roundf(pos.z);
 
             // Sample
             float density = sampleVolumeNearest(volumeData, VOLUME_WIDTH, VOLUME_HEIGHT, VOLUME_DEPTH, ix, iy, iz);
@@ -106,6 +107,9 @@ __global__ void raycastKernel(float* volumeData, FrameBuffer framebuffer) {
                 colorB     += (1.0f - alphaAccum) * shadedColor.z * alphaSample;
                 alphaAccum += (1.0f - alphaAccum) * alphaSample;
             }
+
+            // TODO: Add silhouette - Take gradient of volume dot with view direction (if small then this is a silhouette)
+            // TODO: Scale volume correctly
 
             tCurrent += stepSize;
         }

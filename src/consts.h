@@ -5,8 +5,8 @@
 #include <cmath>
 
 // --------------------------- Basic Constants ---------------------------
-const int VOLUME_WIDTH  = 49;
-const int VOLUME_HEIGHT = 51;
+const int VOLUME_WIDTH  = 576;
+const int VOLUME_HEIGHT = 361;
 const int VOLUME_DEPTH  = 42;
 
 const int IMAGE_WIDTH   = 800;
