@@ -10,6 +10,7 @@
 #include <iostream>
 #include "objs/sphere.h"
 
+// TODO: Probbably move this transfer function business into a different file
 // Samples the voxel nearest to the given coordinates. TODO: Can be re-used in other places so move
 __device__ float sampleVolumeNearest(float* volumeData, const int volW, const int volH, const int volD, int vx, int vy, int vz) {
     if (vx < 0) vx = 0;
@@ -44,6 +45,32 @@ __device__ float sampleVolumeTrilinear(float* volumeData, const int volW, const 
     return c0 * (1.0f - dz) + c1 * dz;
 }
 
+// Function to map a temperature to an RGB color
+__device__ Color3 temperatureToRGB(float temperature) {
+    // atm, the scalar field is normalized
+    const float minTemp = 0.0f; // coldest == deep blue
+    const float maxTemp = 1.0f;  // hottest temperature == deep red
+
+    temperature = clamp(temperature, minTemp, maxTemp);
+    float t = normalize(temperature, minTemp, maxTemp);
+
+    float r, g, b;
+
+    if (t < 0.5f) { // From blue to green
+        t *= 2.0f; // Scale to [0, 1]
+        r = interpolate(0.0f, 0.0f, t);
+        g = interpolate(0.0f, 1.0f, t);
+        b = interpolate(1.0f, 0.0f, t);
+    } else { // From green to red
+        t = (t - 0.5f) * 2.0f; // Scale to [0, 1]
+        r = interpolate(0.0f, 1.0f, t);
+        g = interpolate(1.0f, 0.0f, t);
+        b = interpolate(0.0f, 0.0f, t);
+    }
+
+    return Color3::init(r, g, b);
+}
+
 
 // Transfer function
 __device__ float4 transferFunction(float density, Vec3 grad, Point3 pos, Vec3 rayDir) {
@@ -52,7 +79,8 @@ __device__ float4 transferFunction(float density, Vec3 grad, Point3 pos, Vec3 ra
   float alphaSample = density * 0.1f;
   // result.w = 1.0f - expf(-density * 0.1f);
 
-  Color3 baseColor = Color3::init(density, 0.1f*density, 1.f - density);  // TODO: Implement a proper transfer function
+  // Color3 baseColor = Color3::init(density, 0.1f*density, 1.f - density);  // TODO: Implement a proper transfer function
+  Color3 baseColor = temperatureToRGB(density);
 
   Vec3 normal = -grad.normalize();
 
@@ -78,6 +106,7 @@ __device__ float4 transferFunction(float density, Vec3 grad, Point3 pos, Vec3 ra
 
   return result;
 }
+
 
 
 // TODO: instead of IMAGEWIDTH and IMAGEHEIGHT this should reflect the windowSize;
@@ -149,16 +178,13 @@ __global__ void raycastKernel(float* volumeData, FrameBuffer framebuffer) {
               Point3 pos = d_cameraPos + rayDir * tCurrent;
 
               // Convert to volume indices
-              // float fx = pos.x * (VOLUME_WIDTH  - 1);
-              // float fy = pos.y * (VOLUME_HEIGHT - 1);
-              // float fz = pos.z * (VOLUME_DEPTH  - 1);
               int ix = (int)roundf(pos.x);
               int iy = (int)roundf(pos.y);
               int iz = (int)roundf(pos.z);
 
               // Sample (pick appropriate method based on volume size)
-              float density = sampleVolumeNearest(volumeData, VOLUME_WIDTH, VOLUME_HEIGHT, VOLUME_DEPTH, ix, iy, iz);
-              // float density = sampleVolumeTrilinear(volumeData, VOLUME_WIDTH, VOLUME_HEIGHT, VOLUME_DEPTH, pos.x, pos.y, pos.z);
+              // float density = sampleVolumeNearest(volumeData, VOLUME_WIDTH, VOLUME_HEIGHT, VOLUME_DEPTH, ix, iy, iz);
+              float density = sampleVolumeTrilinear(volumeData, VOLUME_WIDTH, VOLUME_HEIGHT, VOLUME_DEPTH, pos.x, pos.y, pos.z);
 
               // If density ~ 0, skip shading
               if (density > minAllowedDensity) {
