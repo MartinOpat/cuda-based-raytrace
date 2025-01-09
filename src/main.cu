@@ -21,8 +21,8 @@ static float* d_volume = nullptr;
 // * very similarly - actual code for loading new data as the simulation progresses - right now its effectively a static image loader
 
 void getTemperature(std::vector<float>& temperatureData, int idx = 0) {
-    // std::string path = "data/trimmed";
-    std::string path = "data";
+    std::string path = "data/trimmed";
+    // std::string path = "data";
     std::string variable = "T";
     DataReader dataReader(path, variable);
     size_t dataLength = dataReader.fileLength(idx);
@@ -31,8 +31,8 @@ void getTemperature(std::vector<float>& temperatureData, int idx = 0) {
 }
 
 void getSpeed(std::vector<float>& speedData, int idx = 0) {
-    // std::string path = "data/trimmed";
-    std::string path = "data";
+    std::string path = "data/trimmed";
+    // std::string path = "data";
     std::string varU = "U";
     std::string varV = "V";
 
@@ -64,23 +64,29 @@ int main() {
   // Generate debug volume data
   float* hostVolume = new float[VOLUME_WIDTH * VOLUME_HEIGHT * VOLUME_DEPTH];
   // generateVolume(hostVolume, VOLUME_WIDTH, VOLUME_HEIGHT, VOLUME_DEPTH);
+  int inftyCount=0;
   for (int i = 0; i < VOLUME_WIDTH * VOLUME_HEIGHT * VOLUME_DEPTH; i++) {  // TODO: This is technically an unnecessary artifact of the old code taking in a float* instead of a std::vector
     // Discard temperatures above a small star (supposedly, missing temperature values)
     hostVolume[i] = data[i + 3*VOLUME_DEPTH*VOLUME_HEIGHT*VOLUME_WIDTH];
-    if (data[i + 3*VOLUME_DEPTH*VOLUME_HEIGHT*VOLUME_WIDTH] + epsilon >= infty) hostVolume[i] = 0.0f;
+    if (data[i + 3*VOLUME_DEPTH*VOLUME_HEIGHT*VOLUME_WIDTH] + epsilon >= infty) {hostVolume[i] = -infty; inftyCount++;}
   }
+  std::cout << "inftyCount: " << inftyCount << std::endl;
 
-  // Min-max normalization
-  float minVal = *std::min_element(hostVolume, hostVolume + VOLUME_WIDTH * VOLUME_HEIGHT * VOLUME_DEPTH);
+  float minVal = *std::min_element(hostVolume, hostVolume + VOLUME_WIDTH * VOLUME_HEIGHT * VOLUME_DEPTH, [](float a, float b) {
+    if (a <= epsilon) return false;
+    if (b <= epsilon) return true;
+    return a < b;
+  });
   float maxVal = *std::max_element(hostVolume, hostVolume + VOLUME_WIDTH * VOLUME_HEIGHT * VOLUME_DEPTH);
   std::cout << "minVal: " << minVal << " maxVal: " << maxVal << std::endl;
 
+  // Min-max normalization TODO: Decide whether to keep the normalization here but probably not
   // Normalize to [0, 1]
   // Temperature: min: 0 max: 1 avg: 0.776319 median: 0.790567
   // Speed: min: 0 max: 1 avg: 0.132117 median: 0.0837869
-  for (int i = 0; i < VOLUME_WIDTH * VOLUME_HEIGHT * VOLUME_DEPTH; i++) {
-    hostVolume[i] = (hostVolume[i] - minVal) / (maxVal - minVal);
-  }
+  // for (int i = 0; i < VOLUME_WIDTH * VOLUME_HEIGHT * VOLUME_DEPTH; i++) {
+  //   hostVolume[i] = (hostVolume[i] - minVal) / (maxVal - minVal);
+  // }
 
   // // print min, max, avg., and median values <--- the code actually does not work when this snippet is enabled so probably TODO: Delete this later
   // std::sort(hostVolume, hostVolume + VOLUME_WIDTH * VOLUME_HEIGHT * VOLUME_DEPTH);

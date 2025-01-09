@@ -45,42 +45,92 @@ __device__ float sampleVolumeTrilinear(float* volumeData, const int volW, const 
     return c0 * (1.0f - dz) + c1 * dz;
 }
 
-// Function to map a temperature to an RGB color
-__device__ Color3 temperatureToRGB(float temperature) {
-    // atm, the scalar field is normalized
-    const float minTemp = 0.0f; // coldest == deep blue
-    const float maxTemp = 1.0f;  // hottest temperature == deep red
-
-    temperature = clamp(temperature, minTemp, maxTemp);
-    float t = normalize(temperature, minTemp, maxTemp);
-
-    float r, g, b;
-
-    if (t < 0.5f) { // From blue to green
-        t *= 2.0f; // Scale to [0, 1]
-        r = interpolate(0.0f, 0.0f, t);
-        g = interpolate(0.0f, 1.0f, t);
-        b = interpolate(1.0f, 0.0f, t);
-    } else { // From green to red
-        t = (t - 0.5f) * 2.0f; // Scale to [0, 1]
-        r = interpolate(0.0f, 1.0f, t);
-        g = interpolate(1.0f, 0.0f, t);
-        b = interpolate(0.0f, 0.0f, t);
-    }
-
-    return Color3::init(r, g, b);
+__device__ float opacityFromGradient(const Vec3 &grad) {
+    float gradMag = grad.length();  // magnitude
+    float k = 1e-6f;               // tweak (the smaller the value, the less opacity)  // TODO: What should be the value of this?
+    float alpha = 1.0f - expf(-k * gradMag);
+    return alpha;
 }
+
+struct ColorStop
+{
+    float pos;       // in [0,1]  
+    Color3 color;    // R,G,B in [0,1]
+};
+
+// TODO: Rename probably
+__device__ Color3 colorMapViridis(float normalizedT) {
+    // Here we redefine the color stops to go from deep blue (0.0) to purple (0.5) to deep red (1.0)
+    ColorStop tempStops[] = {
+        { 0.0f, Color3::init(0.0f, 0.0f, 1.0f) },   // deep blue
+        { 0.5f, Color3::init(0.5f, 0.0f, 0.5f) },   // purple
+        { 1.0f, Color3::init(1.0f, 0.0f, 0.0f) }    // deep red
+    };
+
+    // Clamp to [0,1]
+    if (normalizedT < 0.0f) normalizedT = 0.0f;
+    if (normalizedT > 1.0f) normalizedT = 1.0f;
+
+    // We have 3 stops => 2 intervals
+    const int N = 3;
+    for (int i = 0; i < N - 1; ++i)
+    {
+        float start = tempStops[i].pos;
+        float end   = tempStops[i + 1].pos;
+
+        if (normalizedT >= start && normalizedT <= end)
+        {
+            float localT = (normalizedT - start) / (end - start);
+            return interpolate(tempStops[i].color, tempStops[i + 1].color, localT);
+        }
+    }
+    // Fallback if something goes out of [0,1] or numerical issues
+    return tempStops[N - 1].color;
+}
+
+// TODO: This is the old colour map, probably delete
+// // Function to map a temperature to an RGB color
+// __device__ Color3 temperatureToRGB(float temperature) {
+//     // atm, the scalar field is normalized
+//     const float minTemp = 184.f; // coldest == deep blue
+//     const float maxTemp = 312.f;  // hottest temperature == deep red
+
+//     if (temperature < minTemp) {
+//       return Color3::init(1.f, 1.f, 1.f);
+//     }
+//     temperature = clamp(temperature, minTemp, maxTemp);
+//     float t = normalize(temperature, minTemp, maxTemp);
+
+//     float r, g, b;
+
+//     if (t < 0.5f) { // From blue to green
+//         t *= 2.0f; // Scale to [0, 1]
+//         r = interpolate(0.0f, 0.0f, t);
+//         g = interpolate(0.0f, 1.0f, t);
+//         b = interpolate(1.0f, 0.0f, t);
+//     } else { // From green to red
+//         t = (t - 0.5f) * 2.0f; // Scale to [0, 1]
+//         r = interpolate(0.0f, 1.0f, t);
+//         g = interpolate(1.0f, 0.0f, t);
+//         b = interpolate(0.0f, 0.0f, t);
+//     }
+
+//     return Color3::init(r, g, b);
+// }
 
 
 // Transfer function
-__device__ float4 transferFunction(float density, Vec3 grad, Point3 pos, Vec3 rayDir) {
-  float4 result;
+__device__ float4 transferFunction(float density, const Vec3& grad, const Point3& pos, const Vec3& rayDir) {
   // Basic transfer function. TODO: Move to a separate file, and then improve
-  float alphaSample = density * 0.1f;
-  // result.w = 1.0f - expf(-density * 0.1f);
 
   // Color3 baseColor = Color3::init(density, 0.1f*density, 1.f - density);  // TODO: Implement a proper transfer function
-  Color3 baseColor = temperatureToRGB(density);
+  // Color3 baseColor = temperatureToRGB(density);
+  
+  float normDensity = (density - MIN_TEMP) / (MAX_TEMP - MIN_TEMP);
+  normDensity = clamp(normDensity, 0.0f, 1.0f);
+  Color3 baseColor = colorMapViridis(normDensity);
+  float alpha = opacityFromGradient(grad);
+  float alphaSample = density * alpha;  // TODO: Decide whether to keep alpha here or not
 
   Vec3 normal = -grad.normalize();
 
@@ -91,13 +141,14 @@ __device__ float4 transferFunction(float density, Vec3 grad, Point3 pos, Vec3 ra
   Vec3 shadedColor = phongShading(normal, lightDir, viewDir, baseColor);
 
   // Compose
-  result.x = (1.0f - alphaSample) * shadedColor.x * alphaSample;
-  result.y = (1.0f - alphaSample) * shadedColor.y * alphaSample;
-  result.z = (1.0f - alphaSample) * shadedColor.z * alphaSample;
-  result.w = (1.0f - alphaSample) * alphaSample;
+  float4 result;
+  result.x = shadedColor.x * alphaSample;
+  result.y = shadedColor.y * alphaSample;
+  result.z = shadedColor.z * alphaSample;
+  result.w = alpha;  // TODO: Again, decide if alpha here is correct or not
 
-  // TODO: Add silhouette - Take gradient of volume dot with view direction (if small then this is a silhouette)
-  if (grad.dot(viewDir) < epsilon / 100000.0f) {
+  // TODO: This is the black silhouette, technically if we are doing alpha based on gradient then it's kind of redundant (?) ... but could also be used for even sharper edges
+  if (grad.length() > epsilon && fabs(grad.normalize().dot(viewDir)) < 0.2f) {
     result.x = 0.0f;
     result.y = 0.0f;
     result.z = 0.0f;
@@ -163,10 +214,10 @@ __global__ void raycastKernel(float* volumeData, FrameBuffer framebuffer) {
         intersectAxis(d_cameraPos.z, rayDir.z, 0.0f, (float)VOLUME_DEPTH);
 
         if (tNear > tFar){
-          // No intersectionn
-          accumR = 0.9f;
-          accumG = 0.9f;
-          accumB = 0.9f;
+          // No intersection -> Set to brackground color (multiply by SAMPLES_PER_PIXEL because we divide by it later)
+          accumR = 0.1f * (float)SAMPLES_PER_PIXEL;
+          accumG = 0.1f * (float)SAMPLES_PER_PIXEL;
+          accumB = 0.1f * (float)SAMPLES_PER_PIXEL;
         } else {
           if (tNear < 0.0f) tNear = 0.0f;
 
@@ -190,10 +241,10 @@ __global__ void raycastKernel(float* volumeData, FrameBuffer framebuffer) {
               if (density > minAllowedDensity) {
                 Vec3 grad = computeGradient(volumeData, VOLUME_WIDTH, VOLUME_HEIGHT, VOLUME_DEPTH, ix, iy, iz);
                 float4 color = transferFunction(density, grad, pos, rayDir);
-                colorR += color.x;
-                colorG += color.y;
-                colorB += color.z;
-                alphaAccum += color.w;
+                colorR += color.x * (alphaAcumLimit - alphaAccum);
+                colorG += color.y * (alphaAcumLimit - alphaAccum);
+                colorB += color.z * (alphaAcumLimit - alphaAccum);
+                alphaAccum += color.w * (alphaAcumLimit - alphaAccum);
               }
 
 
@@ -204,12 +255,13 @@ __global__ void raycastKernel(float* volumeData, FrameBuffer framebuffer) {
           accumG += colorG;
           accumB += colorB;
 
-          // float leftover = 1.0f - alphaAccum;
-          // accumR = accumR + leftover * 0.9f;
-          // accumG = accumG + leftover * 0.9f;
-          // accumB = accumB + leftover * 0.9f;
+          float leftover = 1.0 - alphaAccum;
+          accumR = accumR + leftover * 0.1f;
+          accumG = accumG + leftover * 0.1f;
+          accumB = accumB + leftover * 0.1f;
         }
     }
+
 
     // Average samples
     accumR /= (float)SAMPLES_PER_PIXEL;

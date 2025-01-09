@@ -5,9 +5,12 @@
 #include <cmath>
 
 // --------------------------- Basic Constants ---------------------------
-const int VOLUME_WIDTH  = 576;
-const int VOLUME_HEIGHT = 361;
-const int VOLUME_DEPTH  = 42;
+// TODO: Right now this corresponds to the data set resolution (i.e., voxel per block in volume), however, we can separate this to allow for higher-resolution rendering
+// const int VOLUME_WIDTH  = 576;  // lon
+const int VOLUME_WIDTH  = 97;  // lon
+// const int VOLUME_HEIGHT = 361;  // lat
+const int VOLUME_HEIGHT = 71;  // lat
+const int VOLUME_DEPTH  = 42;  // lev
 
 const int IMAGE_WIDTH   = 1600;
 const int IMAGE_HEIGHT  = 1200;
@@ -15,14 +18,18 @@ const int IMAGE_HEIGHT  = 1200;
 const double epsilon = 1e-10f;
 const double infty   = 1e15f;  // This value is used to represent missing values in data
 
+// --------------------------- Dataset Constants ---------------------------
+const float MIN_TEMP = 184.0f;
+const float MAX_TEMP = 313.0f;
+
 
 // --------------------------- Raycasting Constants ---------------------------
-const int SAMPLES_PER_PIXEL = 8;  // TODO: Right now uses simple variance, consider using something more advanced (e.g., some commonly-used noise map)
+const int SAMPLES_PER_PIXEL = 1;  // TODO: Right now uses simple variance, consider using something more advanced (e.g., some commonly-used noise map)
 
-const float alphaAcumLimit = 0.65f;   // TODO: Idk what a good accumulation value is
+const float alphaAcumLimit = 0.4f;   // TODO: Idk what a good accumulation value is  <--- This finally does something when using alpha in both places at least
 const float minAllowedDensity = 0.001f;
 
-const float stepSize = 0.002f;
+const float stepSize = 0.02f;
 
 
 // --------------------------- Illumination Constants ---------------------------
