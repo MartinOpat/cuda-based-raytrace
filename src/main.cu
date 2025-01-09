@@ -10,6 +10,7 @@
 #include <iostream>
 #include "linalg/linalg.h" 
 #include <vector>
+#include <numeric>
 
 
 static float* d_volume = nullptr;
@@ -54,8 +55,8 @@ void getSpeed(std::vector<float>& speedData, int idx = 0) {
 
 int main() {
   std::vector<float> data;
-  // getTemperature(data);
-  getSpeed(data);
+  getTemperature(data);
+  // getSpeed(data);
 
   std::cout << "DATA size: " << data.size() << std::endl;
 
@@ -74,9 +75,18 @@ int main() {
   float maxVal = *std::max_element(hostVolume, hostVolume + VOLUME_WIDTH * VOLUME_HEIGHT * VOLUME_DEPTH);
   std::cout << "minVal: " << minVal << " maxVal: " << maxVal << std::endl;
 
+  // Normalize to [0, 1]
+  // Temperature: min: 0 max: 1 avg: 0.776319 median: 0.790567
+  // Speed: min: 0 max: 1 avg: 0.132117 median: 0.0837869
   for (int i = 0; i < VOLUME_WIDTH * VOLUME_HEIGHT * VOLUME_DEPTH; i++) {
     hostVolume[i] = (hostVolume[i] - minVal) / (maxVal - minVal);
   }
+
+  // // print min, max, avg., and median values <--- the code actually does not work when this snippet is enabled so probably TODO: Delete this later
+  // std::sort(hostVolume, hostVolume + VOLUME_WIDTH * VOLUME_HEIGHT * VOLUME_DEPTH);
+  // float sum = std::accumulate(hostVolume, hostVolume + VOLUME_WIDTH * VOLUME_HEIGHT * VOLUME_DEPTH, 0.0f);
+  // float avg = sum / (VOLUME_WIDTH * VOLUME_HEIGHT * VOLUME_DEPTH);
+  // std::cout << "min: " << hostVolume[0] << " max: " << hostVolume[VOLUME_WIDTH * VOLUME_HEIGHT * VOLUME_DEPTH - 1] << " avg: " << avg << " median: " << hostVolume[VOLUME_WIDTH * VOLUME_HEIGHT * VOLUME_DEPTH / 2] << std::endl;
 
   // Allocate + copy data to GPU
   size_t volumeSize = sizeof(float) * VOLUME_WIDTH * VOLUME_HEIGHT * VOLUME_DEPTH;
