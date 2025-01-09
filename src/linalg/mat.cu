@@ -54,9 +54,3 @@ __device__ float clamp(float value, float min, float max) {
 __device__ float normalize(float value, float min, float max) {
   return (value - min) / (max - min);
 }
-
-// Interpolate between two values
-template <typename T>
-__device__ T interpolate(T start, T end, float t) {
-  return start + t * (end - start);
-}
