@@ -44,3 +44,19 @@ __device__ unsigned int packUnorm4x8(float r, float g, float b, float a) {
 
 	return u.out;
 }
+
+// Clamp a value between a min and max value
+__device__ float clamp(float value, float min, float max) {
+  return fmaxf(min, fminf(value, max));
+}
+
+// Normalize a float to the range [0, 1]
+__device__ float normalize(float value, float min, float max) {
+  return (value - min) / (max - min);
+}
+
+// Interpolate between two values
+template <typename T>
+__device__ T interpolate(T start, T end, float t) {
+  return start + t * (end - start);
+}
