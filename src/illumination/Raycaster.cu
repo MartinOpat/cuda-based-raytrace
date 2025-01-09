@@ -23,6 +23,62 @@ __device__ float sampleVolumeNearest(float* volumeData, const int volW, const in
     return volumeData[idx];
 }
 
+// tri-linear interpolation - ready if necessary (but no visible improvement for full volume)
+__device__ float sampleVolumeTrilinear(float* volumeData, const int volW, const int volH, const int volD, float fx, float fy, float fz) {
+    int ix = (int)fx;
+    int iy = (int)fy;
+    int iz = (int)fz;
+
+    float dx = fx - ix;
+    float dy = fy - iy;
+    float dz = fz - iz;
+
+    float c00 = sampleVolumeNearest(volumeData, volW, volH, volD, ix, iy, iz) * (1.0f - dx) + sampleVolumeNearest(volumeData, volW, volH, volD, ix + 1, iy, iz) * dx;
+    float c10 = sampleVolumeNearest(volumeData, volW, volH, volD, ix, iy + 1, iz) * (1.0f - dx) + sampleVolumeNearest(volumeData, volW, volH, volD, ix + 1, iy + 1, iz) * dx;
+    float c01 = sampleVolumeNearest(volumeData, volW, volH, volD, ix, iy, iz + 1) * (1.0f - dx) + sampleVolumeNearest(volumeData, volW, volH, volD, ix + 1, iy, iz + 1) * dx;
+    float c11 = sampleVolumeNearest(volumeData, volW, volH, volD, ix, iy + 1, iz + 1) * (1.0f - dx) + sampleVolumeNearest(volumeData, volW, volH, volD, ix + 1, iy + 1, iz + 1) * dx;
+
+    float c0 = c00 * (1.0f - dy) + c10 * dy;
+    float c1 = c01 * (1.0f - dy) + c11 * dy;
+
+    return c0 * (1.0f - dz) + c1 * dz;
+}
+
+
+// Transfer function
+__device__ float4 transferFunction(float density, Vec3 grad, Point3 pos, Vec3 rayDir) {
+  float4 result;
+  // Basic transfer function. TODO: Move to a separate file, and then improve
+  float alphaSample = density * 0.1f;
+  // result.w = 1.0f - expf(-density * 0.1f);
+
+  Color3 baseColor = Color3::init(density, 0.1f*density, 1.f - density);  // TODO: Implement a proper transfer function
+
+  Vec3 normal = -grad.normalize();
+
+  Vec3 lightDir = (d_lightPos - pos).normalize();
+  Vec3 viewDir  = -rayDir.normalize();
+
+  // Apply Phong
+  Vec3 shadedColor = phongShading(normal, lightDir, viewDir, baseColor);
+
+  // Compose
+  result.x = (1.0f - alphaSample) * shadedColor.x * alphaSample;
+  result.y = (1.0f - alphaSample) * shadedColor.y * alphaSample;
+  result.z = (1.0f - alphaSample) * shadedColor.z * alphaSample;
+  result.w = (1.0f - alphaSample) * alphaSample;
+
+  // TODO: Add silhouette - Take gradient of volume dot with view direction (if small then this is a silhouette)
+  if (grad.dot(viewDir) < epsilon / 100000.0f) {
+    result.x = 0.0f;
+    result.y = 0.0f;
+    result.z = 0.0f;
+    result.w = 1.0f;
+  }
+
+  return result;
+}
+
 
 // TODO: instead of IMAGEWIDTH and IMAGEHEIGHT this should reflect the windowSize;
 __global__ void raycastKernel(float* volumeData, FrameBuffer framebuffer) {
@@ -77,59 +133,56 @@ __global__ void raycastKernel(float* volumeData, FrameBuffer framebuffer) {
         intersectAxis(d_cameraPos.y, rayDir.y, 0.0f, (float)VOLUME_HEIGHT);
         intersectAxis(d_cameraPos.z, rayDir.z, 0.0f, (float)VOLUME_DEPTH);
 
-        if (tNear > tFar) continue;  // No intersectionn
-        if (tNear < 0.0f) tNear = 0.0f;
+        if (tNear > tFar){
+          // No intersectionn
+          accumR = 0.9f;
+          accumG = 0.9f;
+          accumB = 0.9f;
+        } else {
+          if (tNear < 0.0f) tNear = 0.0f;
 
-        float colorR = 0.0f, colorG = 0.0f, colorB = 0.0f;
-        float alphaAccum = 0.0f;
+          float colorR = 0.0f, colorG = 0.0f, colorB = 0.0f;
+          float alphaAccum = 0.0f;
 
-        float tCurrent = tNear;
-        while (tCurrent < tFar && alphaAccum < alphaAcumLimit) {
-            Point3 pos = d_cameraPos + rayDir * tCurrent;
+          float tCurrent = tNear;
+          while (tCurrent < tFar && alphaAccum < alphaAcumLimit) {
+              Point3 pos = d_cameraPos + rayDir * tCurrent;
 
-            // Convert to volume indices
-            // float fx = pos.x * (VOLUME_WIDTH  - 1);
-            // float fy = pos.y * (VOLUME_HEIGHT - 1);
-            // float fz = pos.z * (VOLUME_DEPTH  - 1);
-            int ix = (int)roundf(pos.x);
-            int iy = (int)roundf(pos.y);
-            int iz = (int)roundf(pos.z);
+              // Convert to volume indices
+              // float fx = pos.x * (VOLUME_WIDTH  - 1);
+              // float fy = pos.y * (VOLUME_HEIGHT - 1);
+              // float fz = pos.z * (VOLUME_DEPTH  - 1);
+              int ix = (int)roundf(pos.x);
+              int iy = (int)roundf(pos.y);
+              int iz = (int)roundf(pos.z);
 
-            // Sample
-            float density = sampleVolumeNearest(volumeData, VOLUME_WIDTH, VOLUME_HEIGHT, VOLUME_DEPTH, ix, iy, iz);
+              // Sample (pick appropriate method based on volume size)
+              float density = sampleVolumeNearest(volumeData, VOLUME_WIDTH, VOLUME_HEIGHT, VOLUME_DEPTH, ix, iy, iz);
+              // float density = sampleVolumeTrilinear(volumeData, VOLUME_WIDTH, VOLUME_HEIGHT, VOLUME_DEPTH, pos.x, pos.y, pos.z);
 
-            // Basic transfer function. TODO: Move to a separate file, and then improve
-            float alphaSample = density * 0.1f;
-            // float alphaSample = 1.0f - expf(-density * 0.1f);
-            Color3 baseColor = Color3::init(density, 0.1f*density, 1.f - density);  // TODO: Implement a proper transfer function
-
-            // If density ~ 0, skip shading
-            if (density > minAllowedDensity) {
+              // If density ~ 0, skip shading
+              if (density > minAllowedDensity) {
                 Vec3 grad = computeGradient(volumeData, VOLUME_WIDTH, VOLUME_HEIGHT, VOLUME_DEPTH, ix, iy, iz);
-                Vec3 normal = -grad.normalize();
+                float4 color = transferFunction(density, grad, pos, rayDir);
+                colorR += color.x;
+                colorG += color.y;
+                colorB += color.z;
+                alphaAccum += color.w;
+              }
 
-                Vec3 lightDir = (d_lightPos - pos).normalize();
-                Vec3 viewDir  = -rayDir.normalize();
 
-                // Apply Phong
-                Vec3 shadedColor = phongShading(normal, lightDir, viewDir, baseColor);
+              tCurrent += stepSize;
+          }
 
-                // Compose
-                colorR     += (1.0f - alphaAccum) * shadedColor.x * alphaSample;
-                colorG     += (1.0f - alphaAccum) * shadedColor.y * alphaSample;
-                colorB     += (1.0f - alphaAccum) * shadedColor.z * alphaSample;
-                alphaAccum += (1.0f - alphaAccum) * alphaSample;
-            }
+          accumR += colorR;
+          accumG += colorG;
+          accumB += colorB;
 
-            // TODO: Add silhouette - Take gradient of volume dot with view direction (if small then this is a silhouette)
-            // TODO: Scale volume correctly
-
-            tCurrent += stepSize;
+          // float leftover = 1.0f - alphaAccum;
+          // accumR = accumR + leftover * 0.9f;
+          // accumG = accumG + leftover * 0.9f;
+          // accumB = accumB + leftover * 0.9f;
         }
-
-        accumR += colorR;
-        accumG += colorG;
-        accumB += colorB;
     }
 
     // Average samples
