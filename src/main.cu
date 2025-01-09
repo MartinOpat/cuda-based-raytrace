@@ -75,7 +75,7 @@ int main() {
   std::cout << "minVal: " << minVal << " maxVal: " << maxVal << std::endl;
 
   for (int i = 0; i < VOLUME_WIDTH * VOLUME_HEIGHT * VOLUME_DEPTH; i++) {
-    hostVolume[i] = (hostVolume[i] - minVal) / (maxVal - minVal);
+    hostVolume[i] = normalize(hostVolume[i], minVal, maxVal);
   }
 
   // Allocate + copy data to GPU
