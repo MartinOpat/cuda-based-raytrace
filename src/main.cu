@@ -55,8 +55,8 @@ void getSpeed(std::vector<float>& speedData, int idx = 0) {
 
 int main() {
   std::vector<float> data;
-  getTemperature(data);
-  // getSpeed(data);
+  getTemperature(data, 0);
+  // getSpeed(data, 294);
 
   std::cout << "DATA size: " << data.size() << std::endl;
 
@@ -65,12 +65,35 @@ int main() {
   float* hostVolume = new float[VOLUME_WIDTH * VOLUME_HEIGHT * VOLUME_DEPTH];
   // generateVolume(hostVolume, VOLUME_WIDTH, VOLUME_HEIGHT, VOLUME_DEPTH);
   int inftyCount=0;
-  for (int i = 0; i < VOLUME_WIDTH * VOLUME_HEIGHT * VOLUME_DEPTH; i++) {  // TODO: This is technically an unnecessary artifact of the old code taking in a float* instead of a std::vector
+  for (int i = 0; i < VOLUME_WIDTH * VOLUME_HEIGHT * VOLUME_DEPTH; i++) {
     // Discard temperatures above a small star (supposedly, missing temperature values)
-    hostVolume[i] = data[i + 3*VOLUME_DEPTH*VOLUME_HEIGHT*VOLUME_WIDTH];
-    if (data[i + 3*VOLUME_DEPTH*VOLUME_HEIGHT*VOLUME_WIDTH] + epsilon >= infty) {hostVolume[i] = -infty; inftyCount++;}
+    hostVolume[i] = data[i + 0*VOLUME_DEPTH*VOLUME_HEIGHT*VOLUME_WIDTH];
+    if (data[i + 0*VOLUME_DEPTH*VOLUME_HEIGHT*VOLUME_WIDTH] + epsilon >= infty) {hostVolume[i] = -infty; inftyCount++;}
   }
   std::cout << "inftyCount: " << inftyCount << std::endl;
+
+  // Reverse the order of hostVolume
+  for (int i = 0; i < VOLUME_WIDTH; i++) {
+    for (int j = 0; j < VOLUME_HEIGHT; j++) {
+      for (int k = 0; k < VOLUME_DEPTH/2; k++) {
+        float temp = hostVolume[i + j*VOLUME_WIDTH + k*VOLUME_WIDTH*VOLUME_HEIGHT];
+        hostVolume[i + j*VOLUME_WIDTH + k*VOLUME_WIDTH*VOLUME_HEIGHT] = hostVolume[i + j*VOLUME_WIDTH + (VOLUME_DEPTH - 1 - k)*VOLUME_WIDTH*VOLUME_HEIGHT];
+        hostVolume[i + j*VOLUME_WIDTH + (VOLUME_DEPTH - 1 - k)*VOLUME_WIDTH*VOLUME_HEIGHT] = temp;
+      }
+    }
+  }
+
+
+  // Store the half-way up slice data into a file
+  std::ofstream myfile;
+  myfile.open("halfwayup.txt");
+  for (int i = 0; i < VOLUME_WIDTH; i++) {
+    for (int j = 0; j < VOLUME_HEIGHT; j++) {
+      myfile << hostVolume[i + j*VOLUME_WIDTH + VOLUME_DEPTH/2*VOLUME_WIDTH*VOLUME_HEIGHT] << " ";
+    }
+    myfile << std::endl;
+  }
+  myfile.close();
 
   float minVal = *std::min_element(hostVolume, hostVolume + VOLUME_WIDTH * VOLUME_HEIGHT * VOLUME_DEPTH, [](float a, float b) {
     if (a <= epsilon) return false;

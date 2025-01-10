@@ -9,35 +9,110 @@
 #include "shading.h"
 #include <iostream>
 #include "objs/sphere.h"
+#include <curand_kernel.h>
 
 // TODO: Probbably move this transfer function business into a different file
 // Samples the voxel nearest to the given coordinates. TODO: Can be re-used in other places so move
 __device__ float sampleVolumeNearest(float* volumeData, const int volW, const int volH, const int volD, int vx, int vy, int vz) {
+    // TODO: I actually do not know which screen coordinates corresponds to which volume coordinates ... so let's try all options
+
+    // x <-> width, y <-> height, z <-> depth
+    // if (vx < 0) vx = 0;
+    // if (vy < 0) vy = 0;
+    // if (vz < 0) vz = 0;
+    // if (vx >= volW) vx = volW  - 1;
+    // if (vy >= volH) vy = volH - 1;
+    // if (vz >= volD) vz = volD  - 1;
+
+    // int idx = vz * volW * volH + vy * volD + vx;
+    // return volumeData[idx];
+
+    // x <-> width, y <-> depth, z <-> height
+    // if (vx < 0) vx = 0;
+    // if (vy < 0) vy = 0;
+    // if (vz < 0) vz = 0;
+    // if (vx >= volW) vx = volW  - 1;
+    // if (vy >= volH) vy = volH - 1;
+    // if (vz >= volD) vz = volD  - 1;
+
+    // int idx = vy * volW * volD + vz * volW + vx;
+    // return volumeData[idx];
+
+    // x <-> height, y <-> width, z <-> depth <--- So far this is the best one
     if (vx < 0) vx = 0;
     if (vy < 0) vy = 0;
     if (vz < 0) vz = 0;
-    if (vx >= volW) vx = volW  - 1;
-    if (vy >= volH) vy = volH - 1;
+    if (vx >= volH) vx = volH  - 1;
+    if (vy >= volW) vy = volW - 1;
     if (vz >= volD) vz = volD  - 1;
 
-    int idx = vz * volW * volH + vy * volD + vx;
+    int idx = vz * volW * volH + vx * volW + vy;
     return volumeData[idx];
+
+    // x <-> height, y <-> depth, z <-> width
+    // if (vx < 0) vx = 0;
+    // if (vy < 0) vy = 0;
+    // if (vz < 0) vz = 0;
+    // if (vx >= volH) vx = volH  - 1;
+    // if (vy >= volD) vy = volD - 1;
+    // if (vz >= volW) vz = volW  - 1;
+
+    // int idx = vy * volW * volH + vz * volW + vx;
+    // return volumeData[idx];
+
+
+    // x <-> depth, y <-> width, z <-> height
+    // if (vx < 0) vx = 0;
+    // if (vy < 0) vy = 0;
+    // if (vz < 0) vz = 0;
+    // if (vx >= volD) vx = volD  - 1;
+    // if (vy >= volW) vy = volW - 1;
+    // if (vz >= volH) vz = volH  - 1;
+
+    // int idx = vz * volD * volW + vx * volW + vy;
+    // return volumeData[idx];
+
+    // x <-> depth, y <-> height, z <-> width
+    // if (vx < 0) vx = 0;
+    // if (vy < 0) vy = 0;
+    // if (vz < 0) vz = 0;
+    // if (vx >= volD) vx = volD  - 1;
+    // if (vy >= volH) vy = volH - 1;
+    // if (vz >= volW) vz = volW  - 1;
+
+    // int idx = vy * volD * volW + vz * volD + vx;
+    // return volumeData[idx];
+
 }
 
 // tri-linear interpolation - ready if necessary (but no visible improvement for full volume)
 __device__ float sampleVolumeTrilinear(float* volumeData, const int volW, const int volH, const int volD, float fx, float fy, float fz) {
-    int ix = (int)fx;
-    int iy = (int)fy;
-    int iz = (int)fz;
+    int ix = (int)floorf(fx);
+    int iy = (int)floorf(fy);
+    int iz = (int)floorf(fz);
 
+    // Clamp indices to valid range
+    int ix1 = min(ix + 1, volW - 1);
+    int iy1 = min(iy + 1, volH - 1);
+    int iz1 = min(iz + 1, volD - 1);
+    ix = max(ix, 0);
+    iy = max(iy, 0);
+    iz = max(iz, 0);
+
+    // Compute weights
     float dx = fx - ix;
     float dy = fy - iy;
     float dz = fz - iz;
 
-    float c00 = sampleVolumeNearest(volumeData, volW, volH, volD, ix, iy, iz) * (1.0f - dx) + sampleVolumeNearest(volumeData, volW, volH, volD, ix + 1, iy, iz) * dx;
-    float c10 = sampleVolumeNearest(volumeData, volW, volH, volD, ix, iy + 1, iz) * (1.0f - dx) + sampleVolumeNearest(volumeData, volW, volH, volD, ix + 1, iy + 1, iz) * dx;
-    float c01 = sampleVolumeNearest(volumeData, volW, volH, volD, ix, iy, iz + 1) * (1.0f - dx) + sampleVolumeNearest(volumeData, volW, volH, volD, ix + 1, iy, iz + 1) * dx;
-    float c11 = sampleVolumeNearest(volumeData, volW, volH, volD, ix, iy + 1, iz + 1) * (1.0f - dx) + sampleVolumeNearest(volumeData, volW, volH, volD, ix + 1, iy + 1, iz + 1) * dx;
+    // Sample values
+    float c00 = sampleVolumeNearest(volumeData, volW, volH, volD, ix, iy, iz) * (1.0f - dx) +
+                sampleVolumeNearest(volumeData, volW, volH, volD, ix1, iy, iz) * dx;
+    float c10 = sampleVolumeNearest(volumeData, volW, volH, volD, ix, iy1, iz) * (1.0f - dx) +
+                sampleVolumeNearest(volumeData, volW, volH, volD, ix1, iy1, iz) * dx;
+    float c01 = sampleVolumeNearest(volumeData, volW, volH, volD, ix, iy, iz1) * (1.0f - dx) +
+                sampleVolumeNearest(volumeData, volW, volH, volD, ix1, iy, iz1) * dx;
+    float c11 = sampleVolumeNearest(volumeData, volW, volH, volD, ix, iy1, iz1) * (1.0f - dx) +
+                sampleVolumeNearest(volumeData, volW, volH, volD, ix1, iy1, iz1) * dx;
 
     float c0 = c00 * (1.0f - dy) + c10 * dy;
     float c1 = c01 * (1.0f - dy) + c11 * dy;
@@ -45,9 +120,10 @@ __device__ float sampleVolumeTrilinear(float* volumeData, const int volW, const 
     return c0 * (1.0f - dz) + c1 * dz;
 }
 
+
 __device__ float opacityFromGradient(const Vec3 &grad) {
     float gradMag = grad.length();  // magnitude
-    float k = 1e-6f;               // tweak (the smaller the value, the less opacity)  // TODO: What should be the value of this?
+    float k = 1e-4f;               // tweak (the smaller the value, the less opacity)  // TODO: What should be the value of this?
     float alpha = 1.0f - expf(-k * gradMag);
     return alpha;
 }
@@ -88,35 +164,65 @@ __device__ Color3 colorMapViridis(float normalizedT) {
     return tempStops[N - 1].color;
 }
 
-// TODO: This is the old colour map, probably delete
-// // Function to map a temperature to an RGB color
-// __device__ Color3 temperatureToRGB(float temperature) {
-//     // atm, the scalar field is normalized
-//     const float minTemp = 184.f; // coldest == deep blue
-//     const float maxTemp = 312.f;  // hottest temperature == deep red
+// Monochromatic colormap for speed
+__device__ Color3 colorMapMonochrome(float normalizedSpeed) {
+    // Define the color stops: black (0.0) to white (1.0)
+    ColorStop speedStops[] = {
+        { 0.0f, Color3::init(0.0f, 0.0f, 0.0f) },  // No colour
+        { 1.0f, Color3::init(1.0f, 1.0f, 1.0f) }   // White
+    };
 
-//     if (temperature < minTemp) {
-//       return Color3::init(1.f, 1.f, 1.f);
-//     }
-//     temperature = clamp(temperature, minTemp, maxTemp);
-//     float t = normalize(temperature, minTemp, maxTemp);
+    // Clamp to [0,1]
+    if (normalizedSpeed < 0.0f) normalizedSpeed = 0.0f;
+    if (normalizedSpeed > 1.0f) normalizedSpeed = 1.0f;
 
-//     float r, g, b;
+    // Single interval (N = 2 for black to white)
+    const int N = 2;
+    for (int i = 0; i < N - 1; ++i)
+    {
+        float start = speedStops[i].pos;
+        float end   = speedStops[i + 1].pos;
 
-//     if (t < 0.5f) { // From blue to green
-//         t *= 2.0f; // Scale to [0, 1]
-//         r = interpolate(0.0f, 0.0f, t);
-//         g = interpolate(0.0f, 1.0f, t);
-//         b = interpolate(1.0f, 0.0f, t);
-//     } else { // From green to red
-//         t = (t - 0.5f) * 2.0f; // Scale to [0, 1]
-//         r = interpolate(0.0f, 1.0f, t);
-//         g = interpolate(1.0f, 0.0f, t);
-//         b = interpolate(0.0f, 0.0f, t);
-//     }
+        if (normalizedSpeed >= start && normalizedSpeed <= end)
+        {
+            float localT = (normalizedSpeed - start) / (end - start);
+            return interpolate(speedStops[i].color, speedStops[i + 1].color, localT);
+        }
+    }
 
-//     return Color3::init(r, g, b);
-// }
+    // Fallback
+    return speedStops[N - 1].color;
+}
+
+// Colormap function for gradient from blue to white to red
+__device__ Color3 colorMapPythonLike(float normalizedValue) {
+  // Define control points for the colormap (approximation of coolwarm)
+  ColorStop coolwarmStops[] = {
+        { 0.0f, Color3::init(0.2298057f, 0.29871797f, 0.75368315f) }, // Dark Blue
+        { 0.25f, Color3::init(0.23437708f, 0.30554173f, 0.75967953f) }, // Mid Blue
+        { 0.5f, Color3::init(0.27582712f, 0.36671692f, 0.81255294f) }, // White
+        { 0.75f, Color3::init(0.79606387f, 0.84869321f, 0.93347147f) }, // Light Orange
+        { 1.0f, Color3::init(0.70567316f, 0.01555616f, 0.15023281f) }  // Red
+  };
+
+  // Clamp the scalar value to [0, 1]
+  normalizedValue = fminf(fmaxf(normalizedValue, 0.0f), 1.0f);
+
+  // Interpolate between the defined color stops
+  const int N = 5; // Number of control points
+  for (int i = 0; i < N - 1; ++i) {
+      float start = coolwarmStops[i].pos;
+      float end = coolwarmStops[i + 1].pos;
+
+      if (normalizedValue >= start && normalizedValue <= end) {
+          float localT = (normalizedValue - start) / (end - start);
+          return interpolate(coolwarmStops[i].color, coolwarmStops[i + 1].color, localT);
+      }
+  }
+
+  // Fallback (shouldn't reach here due to clamping)
+  return coolwarmStops[N - 1].color;
+}
 
 
 // Transfer function
@@ -127,9 +233,18 @@ __device__ float4 transferFunction(float density, const Vec3& grad, const Point3
   // Color3 baseColor = temperatureToRGB(density);
   
   float normDensity = (density - MIN_TEMP) / (MAX_TEMP - MIN_TEMP);
+  // float normDensity = (density - MIN_SPEED) / (MAX_SPEED - MIN_SPEED);
+
   normDensity = clamp(normDensity, 0.0f, 1.0f);
-  Color3 baseColor = colorMapViridis(normDensity);
+
+  // Color3 baseColor = colorMapViridis(normDensity);
+  // Color3 baseColor = colorMapMonochrome(normDensity);
+  Color3 baseColor = colorMapPythonLike(normDensity);
+
+
   float alpha = opacityFromGradient(grad);
+  // alpha = 0.1f;
+  alpha = 1.0f / (1.0f + expf(-250.f * (normDensity - 0.5f)));  // This is also quite nice, but the exponent should be parameterized
   float alphaSample = density * alpha;  // TODO: Decide whether to keep alpha here or not
 
   Vec3 normal = -grad.normalize();
@@ -169,12 +284,19 @@ __global__ void raycastKernel(float* volumeData, FrameBuffer framebuffer) {
     float accumR = 0.0f;
     float accumG = 0.0f;
     float accumB = 0.0f;
+    float accumA = 1.0f;
+    // Initialize random state
+    curandState randState;
+    curand_init(1234, px + py * IMAGE_WIDTH, 0, &randState);
 
+    // Multiple samples per pixel
     // Multiple samples per pixel
     for (int s = 0; s < SAMPLES_PER_PIXEL; s++) {
         // Map to [-1, 1]
-        float u = ((px + 0.5f) / IMAGE_WIDTH ) * 2.0f - 1.0f;
-        float v = ((py + 0.5f) / IMAGE_HEIGHT) * 2.0f - 1.0f;
+        float jitterU = (curand_uniform(&randState) - 0.5f) / IMAGE_WIDTH;
+        float jitterV = (curand_uniform(&randState) - 0.5f) / IMAGE_HEIGHT;
+        float u = ((px + 0.5f + jitterU) / IMAGE_WIDTH ) * 2.0f - 1.0f;
+        float v = ((py + 0.5f + jitterV) / IMAGE_HEIGHT) * 2.0f - 1.0f;
 
         // TODO: Move this (and all similar transformation code) to its own separate file
         float tanHalfFov = tanf(fov * 0.5f);
@@ -186,7 +308,7 @@ __global__ void raycastKernel(float* volumeData, FrameBuffer framebuffer) {
         d_cameraUp = (cameraRight.cross(d_cameraDir)).normalize();
         Vec3 rayDir = (d_cameraDir + cameraRight*u + d_cameraUp*v).normalize();
 
-        // Intersect (for simplicity just a 3D box from 0 to 1 in all dimensions) - TODO: Think about whether this is the best way to do this
+        // Intersect
         float tNear = 0.0f;
         float tFar  = 1e6f;
         auto intersectAxis = [&](float start, float dir, float minV, float maxV) {
@@ -209,24 +331,25 @@ __global__ void raycastKernel(float* volumeData, FrameBuffer framebuffer) {
             }
         };
 
-        intersectAxis(d_cameraPos.x, rayDir.x, 0.0f, (float)VOLUME_WIDTH);
-        intersectAxis(d_cameraPos.y, rayDir.y, 0.0f, (float)VOLUME_HEIGHT);
+        intersectAxis(d_cameraPos.x, rayDir.x, 0.0f, (float)VOLUME_HEIGHT);
+        intersectAxis(d_cameraPos.y, rayDir.y, 0.0f, (float)VOLUME_WIDTH);
         intersectAxis(d_cameraPos.z, rayDir.z, 0.0f, (float)VOLUME_DEPTH);
 
-        if (tNear > tFar){
+        if (tNear > tFar) {
           // No intersection -> Set to brackground color (multiply by SAMPLES_PER_PIXEL because we divide by it later)
           accumR = 0.1f * (float)SAMPLES_PER_PIXEL;
           accumG = 0.1f * (float)SAMPLES_PER_PIXEL;
           accumB = 0.1f * (float)SAMPLES_PER_PIXEL;
+          accumA = 1.0f * (float)SAMPLES_PER_PIXEL;
         } else {
           if (tNear < 0.0f) tNear = 0.0f;
 
           float colorR = 0.0f, colorG = 0.0f, colorB = 0.0f;
           float alphaAccum = 0.0f;
 
-          float tCurrent = tNear;
-          while (tCurrent < tFar && alphaAccum < alphaAcumLimit) {
-              Point3 pos = d_cameraPos + rayDir * tCurrent;
+          float t = tNear;
+          while (t < tFar && alphaAccum < alphaAcumLimit) {
+              Point3 pos = d_cameraPos + rayDir * t;
 
               // Convert to volume indices
               int ix = (int)roundf(pos.x);
@@ -234,31 +357,46 @@ __global__ void raycastKernel(float* volumeData, FrameBuffer framebuffer) {
               int iz = (int)roundf(pos.z);
 
               // Sample (pick appropriate method based on volume size)
-              // float density = sampleVolumeNearest(volumeData, VOLUME_WIDTH, VOLUME_HEIGHT, VOLUME_DEPTH, ix, iy, iz);
-              float density = sampleVolumeTrilinear(volumeData, VOLUME_WIDTH, VOLUME_HEIGHT, VOLUME_DEPTH, pos.x, pos.y, pos.z);
+              float density = sampleVolumeNearest(volumeData, VOLUME_WIDTH, VOLUME_HEIGHT, VOLUME_DEPTH, ix, iy, iz);
+              // float density = sampleVolumeTrilinear(volumeData, VOLUME_WIDTH, VOLUME_HEIGHT, VOLUME_DEPTH, pos.x, pos.y, pos.z);
 
               // If density ~ 0, skip shading
               if (density > minAllowedDensity) {
                 Vec3 grad = computeGradient(volumeData, VOLUME_WIDTH, VOLUME_HEIGHT, VOLUME_DEPTH, ix, iy, iz);
-                float4 color = transferFunction(density, grad, pos, rayDir);
-                colorR += color.x * (alphaAcumLimit - alphaAccum);
-                colorG += color.y * (alphaAcumLimit - alphaAccum);
-                colorB += color.z * (alphaAcumLimit - alphaAccum);
-                alphaAccum += color.w * (alphaAcumLimit - alphaAccum);
+                float4 color = transferFunction(density, grad, pos, rayDir);  // This already returns the alpha-weighted color
+
+                // // Accumulate color, respecting current transparency
+                // colorR += (1.0f - alphaAccum) * color.x * color.w;
+                // colorG += (1.0f - alphaAccum) * color.y * color.w;
+                // colorB += (1.0f - alphaAccum) * color.z * color.w;
+
+                // // Update the total accumulated alpha
+                // alphaAccum += (1.0f - alphaAccum) * color.w;
+
+                colorR = (1.0f - alphaAccum) * color.x + colorR;
+                colorG = (1.0f - alphaAccum) * color.y + colorG;
+                colorB = (1.0f - alphaAccum) * color.z + colorB;
+                alphaAccum = (1 - alphaAccum) * color.w + alphaAccum;
+
               }
 
 
-              tCurrent += stepSize;
+              t += stepSize;
           }
 
+
+          // Calculate final colour
           accumR += colorR;
           accumG += colorG;
           accumB += colorB;
+          accumA += alphaAccum;
 
+          // Blend with background (for transparency)  // TODO: Put background colour in a constant
           float leftover = 1.0 - alphaAccum;
           accumR = accumR + leftover * 0.1f;
           accumG = accumG + leftover * 0.1f;
           accumB = accumB + leftover * 0.1f;
+          // accumA = accumA + leftover * 0.0f;  // This is set to 0.9 instead of 1.0 to be able to see where the volume is a little bit
         }
     }
 
@@ -267,9 +405,10 @@ __global__ void raycastKernel(float* volumeData, FrameBuffer framebuffer) {
     accumR /= (float)SAMPLES_PER_PIXEL;
     accumG /= (float)SAMPLES_PER_PIXEL;
     accumB /= (float)SAMPLES_PER_PIXEL;
+    accumA /= (float)SAMPLES_PER_PIXEL;
 
     // Final colour
-    framebuffer.writePixel(px, py, accumR, accumG, accumB);
+    framebuffer.writePixel(px, py, accumR, accumG, accumB, accumA);
     // int fbIndex = (py * IMAGE_WIDTH + px) * 3;
     // framebuffer[fbIndex + 0] = (unsigned char)(fminf(accumR, 1.f) * 255);
     // framebuffer[fbIndex + 1] = (unsigned char)(fminf(accumG, 1.f) * 255);
