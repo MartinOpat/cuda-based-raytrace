@@ -35,6 +35,7 @@ const float stepSize = 0.02f;
 
 
 // --------------------------- Illumination Constants ---------------------------
+// Shading consts
 const double ambientStrength  = 0.3;
 const double diffuseStrength  = 0.8;
 const double specularStrength = 0.5;
@@ -47,6 +48,8 @@ extern __device__ Vec3 d_cameraDir;
 extern __device__ Vec3 d_cameraUp;
 extern __device__ Point3 d_lightPos;
 
+// Background color
+extern __device__ Color3 d_backgroundColor;
 
 // --------------------------- Transfer Function Constants ---------------------------
 struct ColorStop {

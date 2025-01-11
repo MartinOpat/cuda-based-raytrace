@@ -72,9 +72,9 @@ __global__ void raycastKernel(float* volumeData, FrameBuffer framebuffer) {
 
         if (tNear > tFar) {
           // No intersection -> Set to brackground color (multiply by SAMPLES_PER_PIXEL because we divide by it later)
-          accumR = 0.1f * (float)SAMPLES_PER_PIXEL;
-          accumG = 0.1f * (float)SAMPLES_PER_PIXEL;
-          accumB = 0.1f * (float)SAMPLES_PER_PIXEL;
+          accumR = d_backgroundColor.x * (float)SAMPLES_PER_PIXEL;
+          accumG = d_backgroundColor.y * (float)SAMPLES_PER_PIXEL;
+          accumB = d_backgroundColor.z * (float)SAMPLES_PER_PIXEL;
           accumA = 1.0f * (float)SAMPLES_PER_PIXEL;
         } else {
           if (tNear < 0.0f) tNear = 0.0f;
@@ -119,11 +119,11 @@ __global__ void raycastKernel(float* volumeData, FrameBuffer framebuffer) {
           accumB += colorB;
           accumA += alphaAccum;
 
-          // Blend with background (for transparency)  // TODO: Put background colour in a constant
+          // Blend with background (for transparency)
           float leftover = 1.0 - alphaAccum;
-          accumR = accumR + leftover * 0.1f;
-          accumG = accumG + leftover * 0.1f;
-          accumB = accumB + leftover * 0.1f;
+          accumR = accumR + leftover * d_backgroundColor.x;
+          accumG = accumG + leftover * d_backgroundColor.y;
+          accumB = accumB + leftover * d_backgroundColor.z;
         }
     }
 
