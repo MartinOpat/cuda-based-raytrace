@@ -53,13 +53,13 @@ __device__ float sampleVolumeTrilinear(float* volumeData, const int volW, const 
 
 __device__ float opacityFromGradient(const Vec3 &grad) {
     float gradMag = grad.length();
-    float k = 1e-4f;               // tweak (the smaller the value, the less opacity)  // TODO: Add a slider for this
+    float k = 1e-6f;               // tweak (the smaller the value, the less opacity)  // TODO: Add a slider for this
     float alpha = 1.0f - expf(-k * gradMag);
     return alpha;
 }
 
-__device__ float opacitySigmoid(float normDensity) {
-    return 1.0f / (1.0f + expf(-250.f * (normDensity - 0.5f)));  // TODO: Parametrize and add sliders
+__device__ float opacitySigmoid(float val) {
+    return 1.0f / (1.0f + expf(-250.f * (val - 0.5f)));  // TODO: Parametrize and add sliders
 }
 
 __device__ Color3 colorMap(float normalizedValues, const ColorStop stops[], int N) {
@@ -98,10 +98,11 @@ __device__ float4 transferFunction(float density, const Vec3& grad, const Point3
 
   // TODO: Add a way to pick different function for alpha
   float alpha = opacityFromGradient(grad);
-  alpha = 0.1f;
+  // alpha = 0.1f;
   alpha = opacitySigmoid(normDensity);
+  // alpha = (1.0f - fabs(grad.normalize().dot(rayDir.normalize()))) * 0.8f + 0.2f;
 
-  float alphaSample = density * alpha;
+  float alphaSample = density * alpha * 0.1;
 
   // --------------------------- Shading ---------------------------
   // Apply Phong
@@ -120,12 +121,13 @@ __device__ float4 transferFunction(float density, const Vec3& grad, const Point3
   // --------------------------- Silhouettes ---------------------------
   // TODO: This is the black silhouette, technically if we are doing alpha based on gradient then it's kind of redundant (?) ... but could also be used for even more pronounced edges
   // TODO: Add a way to adjust the treshold (0.2f atm)
-  if (grad.length() > epsilon && fabs(grad.normalize().dot(viewDir.normalize())) < 0.2f) {
-    result.x = 0.0f;
-    result.y = 0.0f;
-    result.z = 0.0f;
-    result.w = 1.0f;
-  }
+  // TODO: I don't think we should literally be doing this => use gradient based opacity => delete the below if-statement
+  // if (fabs(grad.normalize().dot(rayDir.normalize())) < 0.2f) {
+  //   result.x = 0.0f;
+  //   result.y = 0.0f;
+  //   result.z = 0.0f;
+  //   result.w = 1.0f;
+  // }
 
   return result;
 }
