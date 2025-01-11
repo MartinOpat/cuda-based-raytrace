@@ -5,6 +5,7 @@
 #include <memory>
 
 #include "Shader.h"
+#include "input/Widget.h"
 
 Window::Window(unsigned int w, unsigned int h) {
   this->w = w;
@@ -28,9 +29,6 @@ int Window::init(float* data) {
 
   this->window = glfwCreateWindow(this->w, this->h, "CUDA ray tracing", NULL, NULL);
 
-  //hide cursor // TODO: switch from this style input to something more resembling an actual gui
-  glfwSetInputMode(this->window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
-  glfwSetWindowUserPointer(this->window, reinterpret_cast<void*>(this));
 
   if (this->window == NULL) {
     std::cout << "Failed to create window\n";
@@ -52,6 +50,10 @@ int Window::init(float* data) {
 
   if (init_quad(data)) return -1;
 	this->last_frame = std::chrono::steady_clock::now();
+
+  // init imGUI
+  this->widget = new Widget(this->window);
+
 
   while (!glfwWindowShouldClose(window)) {
     Window::tick();
@@ -79,7 +81,9 @@ void Window::free(float* data) {
   // To preserve the proper destruction order we forcefully set the quads to null (calling their destructor in the process)
   // Not strictly necessary, but i saw some weird errors on exit without this so best to keep it in.
   this->quad = nullptr;
+  this->widget = nullptr;
   cudaFree(data);
+
 
   glfwDestroyWindow(window);
   glfwTerminate();
@@ -95,23 +99,23 @@ void Window::tick() {
   // TODO: remove debug line at some point
   std::cout << 1000.0/diff << " fps\n";
 
-  // TODO: code input logic and class/struct and stuff
-  // ticking input probably involves 4? steps:
-  // * check if window needs to be closed (escape/q pressed)
-  // * check if camera moved (wasd/hjkl pressed)
-  // (phase 3/do later): check if we switched from realtime tracing to that other option - maybe a pause function? (p pressed?)
-  // * if moved -> update camera (raytracing will involve some logic here too? see when i get there)
+  // input
+  this->widget->tick();
+
   
   // tick render
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 	glDisable(GL_DEPTH_TEST);
 
-	this->quad->render();
+  if (!this->widget->paused) this->quad->render();
   this->shader->use();
 	glBindVertexArray(this->quad->VAO);
 	glBindTexture(GL_TEXTURE_2D, this->quad->tex);
 	glDrawArrays(GL_TRIANGLES, 0, 6); // draw current frame to texture
   
+  // render ImGui context
+  this->widget->render();
+
   // check for events
 	glfwSwapBuffers(this->window);
 	glfwPollEvents();

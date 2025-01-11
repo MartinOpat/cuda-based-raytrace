@@ -14,10 +14,15 @@
 
 static float* d_volume = nullptr;
 
+// FIXME: segfaults on window resize - the raycasting function should work with window->w and window-h instead of constants.
+
 // TODO: general
-// * pass camera_info to the raycasting function - updated according to glfw.
-// * on that note, code for handling input (mouse movement certainly, possibly free input / 4 pre-coded views, q/esc to quit, space for pause (would be were the 'simple' render idea would come in))
-// * very similarly - actual code for loading new data as the simulation progresses - right now its effectively a static image loader
+// * very similarly - actual code for loading new data as the simulation progresses - right now its effectively a static image loader * pause button once that dataloading is implemented 
+
+// * save frames to file while running program -> then export to gif on close.
+// * time controls - arbitrary skipping to specified point (would require some changes to gpubuffer) (could have)
+
+// * transfer function -> move the code in raycastkernel to its own class and add silhouette detection here as well.
 
 void getTemperature(std::vector<float>& temperatureData, int idx = 0) {
     std::string path = "data/trimmed";
@@ -78,46 +83,12 @@ int main() {
   cudaMalloc((void**)&d_volume, volumeSize);
   cudaMemcpy(d_volume, hostVolume, volumeSize, cudaMemcpyHostToDevice);
 
-  // Allocate framebuffer
-  // unsigned char* d_framebuffer;
-  // size_t fbSize = IMAGE_WIDTH * IMAGE_HEIGHT * 3 * sizeof(unsigned char);
-  // cudaMalloc((void**)&d_framebuffer, fbSize);
-  // cudaMemset(d_framebuffer, 0, fbSize);
-
-  // Copy external constants from consts.h to cuda
-  copyConstantsToDevice();
-
-  // NOTE: this is done within the rayTracer class
-  // // Launch kernel
-  // dim3 blockSize(16, 16);  
-  // dim3 gridSize((IMAGE_WIDTH + blockSize.x - 1)/blockSize.x,
-  //               (IMAGE_HEIGHT + blockSize.y - 1)/blockSize.y);
-  //
-  // raycastKernel<<<gridSize, blockSize>>>(
-  //     d_volume,
-  //     d_framebuffer
-  // );
-  // cudaDeviceSynchronize();
-
+  // Create the GUI
   Window window(IMAGE_WIDTH, IMAGE_HEIGHT);
   int out = window.init(d_volume);
 
+  // memory management
   cudaFree(d_volume);
-
-  // // Copy framebuffer back to CPU
-  // unsigned char* hostFramebuffer = new unsigned char[IMAGE_WIDTH * IMAGE_HEIGHT * 3];
-  // cudaMemcpy(hostFramebuffer, d_framebuffer, fbSize, cudaMemcpyDeviceToHost);
-  //
-  // // Export image
-  // saveImage("output.ppm", hostFramebuffer, IMAGE_WIDTH, IMAGE_HEIGHT);
-  //
-  // // Cleanup //TODO: cleanup properly
   delete[] hostVolume;
-  // delete[] hostFramebuffer;
-  // cudaFree(d_volume);
-  // cudaFree(d_framebuffer);
-  //
-  // std::cout << "Phong-DVR rendering done. Image saved to output.ppm" << std::endl;
-  // return 0;
   return out;
 }

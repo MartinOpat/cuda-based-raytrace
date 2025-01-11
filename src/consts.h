@@ -9,6 +9,7 @@ const int VOLUME_WIDTH  = 49;
 const int VOLUME_HEIGHT = 51;
 const int VOLUME_DEPTH  = 42;
 
+// TODO: replace with window->w and window->h
 const int IMAGE_WIDTH   = 800;
 const int IMAGE_HEIGHT  = 600;
 
@@ -39,6 +40,6 @@ extern __device__ Vec3 d_cameraUp;
 extern __device__ Point3 d_lightPos;
 
 // --------------------------- Functions for handling external constants ---------------------------
-void copyConstantsToDevice();
+// void copyConstantsToDevice();
 
 #endif // CONSTS_H

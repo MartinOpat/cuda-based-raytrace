@@ -14,11 +14,19 @@ file(GLOB_RECURSE SOURCE_FILES
 	${CMAKE_SOURCE_DIR}/src/*.cu)
 	
 # header files
-file(GLOB_RECURSE HEADER_FILES 
+file(GLOB HEADER_FILES 
 	${CMAKE_SOURCE_DIR}/src/*.h
 	${CMAKE_SOURCE_DIR}/src/*.hpp)
 
-add_executable(${PROJECT_NAME} ${HEADER_FILES} ${SOURCE_FILES})
+# imgui - note: could be done as a library as well but this was easier for now
+file(GLOB IMGUI_FILES
+  ${CMAKE_SOURCE_DIR}/include/imgui/*.h
+  ${CMAKE_SOURCE_DIR}/include/imgui/*.cpp
+  ${CMAKE_SOURCE_DIR}/include/imgui/backends/imgui_impl_glfw.*
+  ${CMAKE_SOURCE_DIR}/include/imgui/backends/imgui_impl_opengl3.*)
+include_directories(${CMAKE_SOURCE_DIR}/include/imgui)
+
+add_executable(${PROJECT_NAME} ${HEADER_FILES} ${SOURCE_FILES} ${IMGUI_FILES})
 
 # CUDA has specific architectures - set it to the system's architecture if available (or 70 by default)
 set_target_properties(${PROJECT_NAME} PROPERTIES CUDA_ARCHITECTURES 70)

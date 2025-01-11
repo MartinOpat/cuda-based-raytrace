@@ -1,7 +1,6 @@
 #ifndef RAYCASTER_H
 #define RAYCASTER_H
 
-// #include "Camera.h"
 #include "cuda_runtime.h"
 #include "FrameBuffer.h"
 #include "linalg/linalg.h"
@@ -11,9 +10,6 @@
 __global__ void raycastKernel(float* volumeData, unsigned char* framebuffer);
 
 struct Raycaster {
-
-  // thrust::device_ptr<Camera*> d_camera;
-  // CameraInfo camera_info;
 
   cudaGraphicsResource_t resources;
   FrameBuffer* fb;
