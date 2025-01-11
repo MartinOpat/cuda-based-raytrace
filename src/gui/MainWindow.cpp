@@ -64,17 +64,17 @@ int Window::init(float* data) {
   if (init_quad(data)) return -1;
 	this->last_frame = std::chrono::steady_clock::now();
 
-  // TODO: These changes are temporary
-  // while (!glfwWindowShouldClose(window)) {
-  //   Window::tick();
-  // }
-  Window::tick();
-  Window::tick();
-  // Save the image
-  unsigned char* pixels = new unsigned char[this->w * this->h * 3];
-  glReadPixels(0, 0, this->w, this->h, GL_RGB, GL_UNSIGNED_BYTE, pixels);
-  saveImage2("output.ppm", pixels, this->w, this->h);
-  delete[] pixels;
+  while (!glfwWindowShouldClose(window)) {
+    Window::tick();
+  }
+  // TODO: Remove this, this was just for ray-casting debug
+  // Window::tick();
+  // Window::tick();
+  // // Save the image
+  // unsigned char* pixels = new unsigned char[this->w * this->h * 3];
+  // glReadPixels(0, 0, this->w, this->h, GL_RGB, GL_UNSIGNED_BYTE, pixels);
+  // saveImage2("output.ppm", pixels, this->w, this->h);
+  // delete[] pixels;
 
   Window::free(data);
   return 0;
