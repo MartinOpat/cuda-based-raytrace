@@ -60,19 +60,15 @@ int main() {
 
   std::cout << "DATA size: " << data.size() << std::endl;
 
-  // TODO: Eveontually remove debug below (i.e., eliminate for-loop etc.)
-  // Generate debug volume data
+  // TODO: Eventually, we should not need to load the volume like this
   float* hostVolume = new float[VOLUME_WIDTH * VOLUME_HEIGHT * VOLUME_DEPTH];
-  // generateVolume(hostVolume, VOLUME_WIDTH, VOLUME_HEIGHT, VOLUME_DEPTH);
-  int inftyCount=0;
   for (int i = 0; i < VOLUME_WIDTH * VOLUME_HEIGHT * VOLUME_DEPTH; i++) {
-    // Discard temperatures above a small star (supposedly, missing temperature values)
     hostVolume[i] = data[i + 0*VOLUME_DEPTH*VOLUME_HEIGHT*VOLUME_WIDTH];
-    if (data[i + 0*VOLUME_DEPTH*VOLUME_HEIGHT*VOLUME_WIDTH] + epsilon >= infty) {hostVolume[i] = -infty; inftyCount++;}
+    // Discard missing values
+    if (data[i + 0*VOLUME_DEPTH*VOLUME_HEIGHT*VOLUME_WIDTH] + epsilon >= infty) hostVolume[i] = -infty;
   }
-  std::cout << "inftyCount: " << inftyCount << std::endl;
 
-  // Reverse the order of hostVolume
+  // Reverse the order of hostVolume TODO: Idk why the volume upside down, this can probably be deleted and substituted with a minus sign somehwere (camera position?)
   for (int i = 0; i < VOLUME_WIDTH; i++) {
     for (int j = 0; j < VOLUME_HEIGHT; j++) {
       for (int k = 0; k < VOLUME_DEPTH/2; k++) {
@@ -83,8 +79,7 @@ int main() {
     }
   }
 
-
-  // Store the half-way up slice data into a file
+  // Store the half-way up slice data into a file TODO: Remove this debug
   std::ofstream myfile;
   myfile.open("halfwayup.txt");
   for (int i = 0; i < VOLUME_WIDTH; i++) {
@@ -95,6 +90,7 @@ int main() {
   }
   myfile.close();
 
+  // Print min, max, avg., and median values TODO: Remove this debug
   float minVal = *std::min_element(hostVolume, hostVolume + VOLUME_WIDTH * VOLUME_HEIGHT * VOLUME_DEPTH, [](float a, float b) {
     if (a <= epsilon) return false;
     if (b <= epsilon) return true;
@@ -102,15 +98,6 @@ int main() {
   });
   float maxVal = *std::max_element(hostVolume, hostVolume + VOLUME_WIDTH * VOLUME_HEIGHT * VOLUME_DEPTH);
   std::cout << "minVal: " << minVal << " maxVal: " << maxVal << std::endl;
-
-  // Min-max normalization TODO: Decide whether to keep the normalization here but probably not
-  // Normalize to [0, 1]
-  // Temperature: min: 0 max: 1 avg: 0.776319 median: 0.790567
-  // Speed: min: 0 max: 1 avg: 0.132117 median: 0.0837869
-  // for (int i = 0; i < VOLUME_WIDTH * VOLUME_HEIGHT * VOLUME_DEPTH; i++) {
-  //   hostVolume[i] = (hostVolume[i] - minVal) / (maxVal - minVal);
-  // }
-
   // // print min, max, avg., and median values <--- the code actually does not work when this snippet is enabled so probably TODO: Delete this later
   // std::sort(hostVolume, hostVolume + VOLUME_WIDTH * VOLUME_HEIGHT * VOLUME_DEPTH);
   // float sum = std::accumulate(hostVolume, hostVolume + VOLUME_WIDTH * VOLUME_HEIGHT * VOLUME_DEPTH, 0.0f);

@@ -1,6 +1,5 @@
 #include "shading.h"
 
-// TODO: Consider wrapping this in a class (?)
 __device__ Vec3 phongShading(const Vec3& normal, const Vec3& lightDir, const Vec3& viewDir, const Vec3& baseColor) {
     Vec3 ambient = baseColor * ambientStrength;
     double diff = fmax(normal.dot(lightDir), 0.0);

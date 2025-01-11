@@ -28,7 +28,7 @@ const float MAX_SPEED = 14.0f;
 // --------------------------- Raycasting Constants ---------------------------
 const int SAMPLES_PER_PIXEL = 1;
 
-const float alphaAcumLimit = 1.0f;   // TODO: Idk what a good accumulation value is  <--- This finally does something when using alpha in both places at least
+const float alphaAcumLimit = 1.0f;   // TODO: Atm, this does not work very intuitively, other parameters control transparency
 const float minAllowedDensity = 0.001f;
 
 const float stepSize = 0.02f;
