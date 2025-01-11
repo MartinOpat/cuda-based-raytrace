@@ -12,8 +12,6 @@
 #include <curand_kernel.h>
 
 
-
-
 // TODO: instead of IMAGEWIDTH and IMAGEHEIGHT this should reflect the windowSize;
 __global__ void raycastKernel(float* volumeData, FrameBuffer framebuffer) {
     int px = blockIdx.x * blockDim.x + threadIdx.x;
@@ -29,7 +27,6 @@ __global__ void raycastKernel(float* volumeData, FrameBuffer framebuffer) {
     curand_init(1234, px + py * IMAGE_WIDTH, 0, &randState);
 
     // Multiple samples per pixel
-    // Multiple samples per pixel
     for (int s = 0; s < SAMPLES_PER_PIXEL; s++) {
         // Map to [-1, 1]
         float jitterU = (curand_uniform(&randState) - 0.5f) / IMAGE_WIDTH;
@@ -37,7 +34,6 @@ __global__ void raycastKernel(float* volumeData, FrameBuffer framebuffer) {
         float u = ((px + 0.5f + jitterU) / IMAGE_WIDTH ) * 2.0f - 1.0f;
         float v = ((py + 0.5f + jitterV) / IMAGE_HEIGHT) * 2.0f - 1.0f;
 
-        // TODO: Move this (and all similar transformation code) to its own separate file
         float tanHalfFov = tanf(fov * 0.5f);
         u *= tanHalfFov;
         v *= tanHalfFov;
@@ -86,7 +82,7 @@ __global__ void raycastKernel(float* volumeData, FrameBuffer framebuffer) {
           float colorR = 0.0f, colorG = 0.0f, colorB = 0.0f;
           float alphaAccum = 0.0f;
 
-          float t = tNear;
+          float t = tNear;  // Front to back
           while (t < tFar && alphaAccum < alphaAcumLimit) {
               Point3 pos = d_cameraPos + rayDir * t;
 
@@ -95,23 +91,16 @@ __global__ void raycastKernel(float* volumeData, FrameBuffer framebuffer) {
               int iy = (int)roundf(pos.y);
               int iz = (int)roundf(pos.z);
 
-              // Sample (pick appropriate method based on volume size)
-              float density = sampleVolumeNearest(volumeData, VOLUME_WIDTH, VOLUME_HEIGHT, VOLUME_DEPTH, ix, iy, iz);
-              // float density = sampleVolumeTrilinear(volumeData, VOLUME_WIDTH, VOLUME_HEIGHT, VOLUME_DEPTH, pos.x, pos.y, pos.z);
+              // Sample (pick appropriate method based on volume size) TODO: Add a way to pick this in GUI
+              // float density = sampleVolumeNearest(volumeData, VOLUME_WIDTH, VOLUME_HEIGHT, VOLUME_DEPTH, ix, iy, iz);
+              float density = sampleVolumeTrilinear(volumeData, VOLUME_WIDTH, VOLUME_HEIGHT, VOLUME_DEPTH, pos.x, pos.y, pos.z);
 
               // If density ~ 0, skip shading
               if (density > minAllowedDensity) {
                 Vec3 grad = computeGradient(volumeData, VOLUME_WIDTH, VOLUME_HEIGHT, VOLUME_DEPTH, ix, iy, iz);
                 float4 color = transferFunction(density, grad, pos, rayDir);  // This already returns the alpha-weighted color
 
-                // // Accumulate color, respecting current transparency
-                // colorR += (1.0f - alphaAccum) * color.x * color.w;
-                // colorG += (1.0f - alphaAccum) * color.y * color.w;
-                // colorB += (1.0f - alphaAccum) * color.z * color.w;
-
-                // // Update the total accumulated alpha
-                // alphaAccum += (1.0f - alphaAccum) * color.w;
-
+                //Accumulate color, and alpha
                 colorR = (1.0f - alphaAccum) * color.x + colorR;
                 colorG = (1.0f - alphaAccum) * color.y + colorG;
                 colorB = (1.0f - alphaAccum) * color.z + colorB;
@@ -135,7 +124,6 @@ __global__ void raycastKernel(float* volumeData, FrameBuffer framebuffer) {
           accumR = accumR + leftover * 0.1f;
           accumG = accumG + leftover * 0.1f;
           accumB = accumB + leftover * 0.1f;
-          // accumA = accumA + leftover * 0.0f;  // This is set to 0.9 instead of 1.0 to be able to see where the volume is a little bit
         }
     }
 
@@ -148,10 +136,6 @@ __global__ void raycastKernel(float* volumeData, FrameBuffer framebuffer) {
 
     // Final colour
     framebuffer.writePixel(px, py, accumR, accumG, accumB, accumA);
-    // int fbIndex = (py * IMAGE_WIDTH + px) * 3;
-    // framebuffer[fbIndex + 0] = (unsigned char)(fminf(accumR, 1.f) * 255);
-    // framebuffer[fbIndex + 1] = (unsigned char)(fminf(accumG, 1.f) * 255);
-    // framebuffer[fbIndex + 2] = (unsigned char)(fminf(accumB, 1.f) * 255);
 }
 
 

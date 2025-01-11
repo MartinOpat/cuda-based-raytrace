@@ -5,7 +5,6 @@
 #include <cmath>
 
 // --------------------------- Basic Constants ---------------------------
-// TODO: Right now this corresponds to the data set resolution (i.e., voxel per block in volume), however, we can separate this to allow for higher-resolution rendering
 // const int VOLUME_WIDTH  = 576;  // lon
 const int VOLUME_WIDTH  = 97;  // lon
 // const int VOLUME_HEIGHT = 361;  // lat
@@ -27,7 +26,7 @@ const float MAX_SPEED = 14.0f;
 
 
 // --------------------------- Raycasting Constants ---------------------------
-const int SAMPLES_PER_PIXEL = 1;  // TODO: Right now uses simple variance, consider using something more advanced (e.g., some commonly-used noise map)
+const int SAMPLES_PER_PIXEL = 1;
 
 const float alphaAcumLimit = 1.0f;   // TODO: Idk what a good accumulation value is  <--- This finally does something when using alpha in both places at least
 const float minAllowedDensity = 0.001f;
