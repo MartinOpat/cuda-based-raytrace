@@ -21,7 +21,7 @@ __global__ void raycastKernel(float* volumeData, FrameBuffer framebuffer) {
     float accumR = 0.0f;
     float accumG = 0.0f;
     float accumB = 0.0f;
-    float accumA = 1.0f;
+    float accumA = 1.0f * (float)SAMPLES_PER_PIXEL;
 
     // Initialize random state for ray scattering
     curandState randState;
@@ -77,6 +77,7 @@ __global__ void raycastKernel(float* volumeData, FrameBuffer framebuffer) {
           accumG = d_backgroundColor.y * (float)SAMPLES_PER_PIXEL;
           accumB = d_backgroundColor.z * (float)SAMPLES_PER_PIXEL;
           accumA = 1.0f * (float)SAMPLES_PER_PIXEL;
+          
         } else {
           if (tNear < 0.0f) tNear = 0.0f;
 

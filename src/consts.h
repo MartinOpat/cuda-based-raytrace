@@ -26,9 +26,9 @@ const float MAX_SPEED = 14.0f;
 
 
 // --------------------------- Raycasting Constants ---------------------------
-const int SAMPLES_PER_PIXEL = 1;
+const int SAMPLES_PER_PIXEL = 4;
 
-const float alphaAcumLimit = 1.0f;   // TODO: Atm, this does not work very intuitively, other parameters control transparency
+const float alphaAcumLimit = 0.4f;   // TODO: Atm, this only works with sigmoid
 const float minAllowedDensity = 0.001f;
 
 const float stepSize = 0.02f;
