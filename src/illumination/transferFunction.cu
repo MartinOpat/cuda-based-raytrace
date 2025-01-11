@@ -1,4 +1,7 @@
 #include "transferFunction.h"
+#include "consts.h"
+
+#include <stdio.h>
 
 
 // Samples the voxel nearest to the given coordinates.
@@ -53,13 +56,12 @@ __device__ float sampleVolumeTrilinear(float* volumeData, const int volW, const 
 
 __device__ float opacityFromGradient(const Vec3 &grad) {
     float gradMag = grad.length();
-    float k = 1e-6f;               // tweak (the smaller the value, the less opacity)  // TODO: Add a slider for this
-    float alpha = 1.0f - expf(-k * gradMag);
+    float alpha = 1.0f - expf(-d_opacityK * gradMag);
     return alpha;
 }
 
 __device__ float opacitySigmoid(float val) {
-    return 1.0f / (1.0f + expf(-250.f * (val - 0.5f)));  // TODO: Parametrize and add sliders
+    return 1.0f / (1.0f + expf(d_sigmoidTwo * (val - d_sigmoidOne)));
 }
 
 __device__ Color3 colorMap(float normalizedValues, const ColorStop stops[], int N) {
@@ -96,6 +98,7 @@ __device__ float4 transferFunction(float density, const Vec3& grad, const Point3
   // TODO: Add a way to pick stops here
   Color3 baseColor = colorMap(normDensity, d_stopsPythonLike, lenStopsPythonLike);
 
+  // TODO: This is a Gui select element
   // TODO: Add a way to pick different function for alpha
   float alpha = opacityFromGradient(grad);
   // alpha = 0.1f;

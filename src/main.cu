@@ -15,7 +15,7 @@
 
 static float* d_volume = nullptr;
 
-// FIXME: segfaults on window resize - the raycasting function should work with window->w and window-h instead of constants.
+// FIXME: segfaults on window resize - the problem is _not_ in the raycasting function
 
 // TODO: general
 // * very similarly - actual code for loading new data as the simulation progresses - right now its effectively a static image loader * pause button once that dataloading is implemented 
@@ -116,7 +116,7 @@ int main() {
 
   copyConstantsToDevice();
   // Create the GUI
-  Window window(IMAGE_WIDTH, IMAGE_HEIGHT);
+  Window window(INITIAL_WINDOW_WIDTH, INITIAL_WINDOW_HEIGHT);
   int out = window.init(d_volume);
 
   // memory management

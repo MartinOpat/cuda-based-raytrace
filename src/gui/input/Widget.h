@@ -12,11 +12,16 @@ public:
   Point3 cameraDir;
   Vec3 cameraPos;
   Point3 lightPos;
-  Color3 bgColor;
+  Color3 bgColor; // TODO: widget
 
   bool paused;
   bool renderOnce;
   char* fps;
+
+  int opacityK;
+  float opacityKReal;
+  float sigmoidOne;
+  float sigmoidTwo;
 
   ImGuiIO io;
 

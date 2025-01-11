@@ -12,10 +12,10 @@
 #include <curand_kernel.h>
 
 // TODO: instead of IMAGEWIDTH and IMAGEHEIGHT this should reflect the windowSize;
-__global__ void raycastKernel(float* volumeData, FrameBuffer framebuffer) {
+__global__ void raycastKernel(float* volumeData, FrameBuffer framebuffer, const int width, const int height) {
     int px = blockIdx.x * blockDim.x + threadIdx.x;
     int py = blockIdx.y * blockDim.y + threadIdx.y;
-    if (px >= IMAGE_WIDTH || py >= IMAGE_HEIGHT) return;
+    if (px >= width || py >= height) return;
 
     float accumR = 0.0f;
     float accumG = 0.0f;
@@ -24,15 +24,15 @@ __global__ void raycastKernel(float* volumeData, FrameBuffer framebuffer) {
 
     // Initialize random state for ray scattering
     curandState randState;
-    curand_init(1234, px + py * IMAGE_WIDTH, 0, &randState);
+    curand_init(1234, px + py * width, 0, &randState);
 
     // Multiple samples per pixel
     for (int s = 0; s < SAMPLES_PER_PIXEL; s++) {
         // Map to [-1, 1]
-        float jitterU = (curand_uniform(&randState) - 0.5f) / IMAGE_WIDTH;
-        float jitterV = (curand_uniform(&randState) - 0.5f) / IMAGE_HEIGHT;
-        float u = ((px + 0.5f + jitterU) / IMAGE_WIDTH ) * 2.0f - 1.0f;
-        float v = ((py + 0.5f + jitterV) / IMAGE_HEIGHT) * 2.0f - 1.0f;
+        float jitterU = (curand_uniform(&randState) - 0.5f) / width;
+        float jitterV = (curand_uniform(&randState) - 0.5f) / height;
+        float u = ((px + 0.5f + jitterU) / width ) * 2.0f - 1.0f;
+        float v = ((py + 0.5f + jitterV) / height) * 2.0f - 1.0f;
 
         float tanHalfFov = tanf(fov * 0.5f);
         u *= tanHalfFov;
@@ -167,7 +167,7 @@ void Raycaster::render() {
 
   // TODO: pass camera info at some point
 	// frame buffer is implicitly copied to the device each frame
-  raycastKernel<<<threadSize, blockSize>>> (this->data, *this->fb);
+  raycastKernel<<<threadSize, blockSize>>> (this->data, *this->fb, this->w, this->h);
 
   check_cuda_errors(cudaGetLastError());
   check_cuda_errors(cudaDeviceSynchronize());

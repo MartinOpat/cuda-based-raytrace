@@ -28,9 +28,9 @@ const ColorStop h_stopsBluePurleRed[] = {
 
 __device__ Point3 d_cameraPos;
 __device__ Vec3 d_cameraDir;
-__device__ Vec3 d_cameraUp;
 __device__ Point3 d_lightPos;
 __device__ Color3 d_backgroundColor;
+__device__ Vec3 d_cameraUp;
 
 Vec3 h_cameraUp = Vec3::init(0.0, 1.0, 0.0).normalize();
 
@@ -45,3 +45,9 @@ void copyConstantsToDevice() {
     // ----------------------- Camera and Light -----------------------
     cudaMemcpyToSymbol(d_cameraUp, &h_cameraUp, sizeof(Vec3));
 }
+
+
+// ----------------------- TransferFunction -----------------------
+__device__ float d_opacityK;
+__device__ float d_sigmoidOne;
+__device__ float d_sigmoidTwo;

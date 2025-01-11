@@ -11,9 +11,8 @@ const int VOLUME_WIDTH  = 97;  // lon
 const int VOLUME_HEIGHT = 71;  // lat
 const int VOLUME_DEPTH  = 42;  // lev
 
-// TODO: replace with window->w and window->h
-const int IMAGE_WIDTH   = 800;
-const int IMAGE_HEIGHT  = 600;
+const int INITIAL_WINDOW_WIDTH   = 1200;
+const int INITIAL_WINDOW_HEIGHT  = 900;
 
 const double epsilon = 1e-10f;
 const double infty   = 1e15f;  // This value is used to represent missing values in data
@@ -52,11 +51,18 @@ extern __device__ Point3 d_lightPos;
 // Background color
 extern __device__ Color3 d_backgroundColor;
 
+
 // --------------------------- Transfer Function Constants ---------------------------
 struct ColorStop {
     float pos;       // in [0,1]  
     Color3 color;
 };
+
+// factor for the opacity function
+extern __device__ float d_opacityK;
+// sigmoid function variables
+extern __device__ float d_sigmoidOne;
+extern __device__ float d_sigmoidTwo;
 
 const int lenStopsPythonLike = 5;
 const int lenStopsGrayscale = 2;
