@@ -13,12 +13,14 @@ public:
   Vec3 cameraPos;
   Vec3 cameraUp;
   Point3 lightPos;
+
   bool paused;
   bool renderOnce;
+  char* fps;
 
   ImGuiIO io;
 
-  void tick();
+  void tick(double fps);
   void render();
   void copyToDevice();
 

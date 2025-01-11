@@ -1,6 +1,8 @@
 #include "Widget.h"
 #include "linalg/linalg.h"
 #include "consts.h"
+#include <cstdio>
+#include <stdlib.h>
 
 
 Widget::Widget(GLFWwindow* window) {
@@ -15,11 +17,13 @@ Widget::Widget(GLFWwindow* window) {
   this->cameraPos = Point3::init(-0.7, -1.0, -2.0);
   this->cameraUp = Vec3::init(0.0, 1.0, 0.0).normalize();
   this->lightPos = Point3::init(1.5, 2.0, -1.0);
+
+  this->fps = (char*)malloc(512*sizeof(char));
   this->paused = true;
   this->renderOnce = false;
 };
 
-void Widget::tick() {
+void Widget::tick(double fps) {
   if (this->renderOnce) {
     this->renderOnce = false;
     this->paused = true;
@@ -38,12 +42,15 @@ void Widget::tick() {
   ImGui::DragScalar("Z coordinate", ImGuiDataType_Double, &this->lightPos.z, 0.005f, &min, &max, "%.3f");
   ImGui::End();
 
-  ImGui::Begin("Pause");
+  ImGui::Begin("Miscellaneous");
   if (ImGui::Button(this->paused ? "Unpause" : "Pause")) this->paused = !this->paused;
+  ImGui::SameLine();
   if (ImGui::Button("render Once")) {
     this->paused = !this->paused;
     this->renderOnce = true;
   }
+  sprintf(this->fps, "%.3f fps\n", fps);
+  ImGui::Text(this->fps);
   ImGui::End();
 
   ImGui::Begin("Camera Controls");
@@ -74,4 +81,5 @@ Widget::~Widget() {
   ImGui_ImplOpenGL3_Shutdown();
   ImGui_ImplGlfw_Shutdown();
   ImGui::DestroyContext();
+  free(this->fps);
 }

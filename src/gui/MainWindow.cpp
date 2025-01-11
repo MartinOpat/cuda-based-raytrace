@@ -96,12 +96,8 @@ void Window::tick() {
   float diff = (float) std::chrono::duration_cast<std::chrono::milliseconds>(now - this->last_frame).count();
   this->last_frame = now;
 
-  // TODO: remove debug line at some point
-  std::cout << 1000.0/diff << " fps\n";
-
   // input
-  this->widget->tick();
-
+  this->widget->tick(1000.0/diff);
   
   // tick render
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
