@@ -22,7 +22,8 @@ __global__ void raycastKernel(float* volumeData, FrameBuffer framebuffer) {
     float accumG = 0.0f;
     float accumB = 0.0f;
     float accumA = 1.0f;
-    // Initialize random state
+
+    // Initialize random state for ray scattering
     curandState randState;
     curand_init(1234, px + py * IMAGE_WIDTH, 0, &randState);
 

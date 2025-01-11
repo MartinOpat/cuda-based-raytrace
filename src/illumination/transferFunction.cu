@@ -22,8 +22,8 @@ __device__ float sampleVolumeTrilinear(float* volumeData, const int volW, const 
     int iz = (int)floorf(fz);
 
     // Clamp indices to valid range
-    int ix1 = min(ix + 1, volW - 1);
-    int iy1 = min(iy + 1, volH - 1);
+    int ix1 = min(ix + 1, volH - 1);
+    int iy1 = min(iy + 1, volW - 1);
     int iz1 = min(iz + 1, volD - 1);
     ix = max(ix, 0);
     iy = max(iy, 0);
@@ -96,11 +96,12 @@ __device__ float4 transferFunction(float density, const Vec3& grad, const Point3
   // TODO: Add a way to pick stops here
   Color3 baseColor = colorMap(normDensity, d_stopsPythonLike, lenStopsPythonLike);
 
-
+  // TODO: Add a way to pick different function for alpha
   float alpha = opacityFromGradient(grad);
-  // alpha = 0.1f;
+  alpha = 0.1f;
   alpha = opacitySigmoid(normDensity);
-  float alphaSample = density * alpha;  // TODO: Decide whether to keep alpha here or not
+
+  float alphaSample = density * alpha;
 
   // --------------------------- Shading ---------------------------
   // Apply Phong
@@ -114,11 +115,12 @@ __device__ float4 transferFunction(float density, const Vec3& grad, const Point3
   result.x = shadedColor.x * alphaSample;
   result.y = shadedColor.y * alphaSample;
   result.z = shadedColor.z * alphaSample;
-  result.w = alpha;  // TODO: Again, decide if alpha here is correct or not
+  result.w = alpha;
 
   // --------------------------- Silhouettes ---------------------------
   // TODO: This is the black silhouette, technically if we are doing alpha based on gradient then it's kind of redundant (?) ... but could also be used for even more pronounced edges
-  if (grad.length() > epsilon && fabs(grad.normalize().dot(viewDir)) < 0.2f) {
+  // TODO: Add a way to adjust the treshold (0.2f atm)
+  if (grad.length() > epsilon && fabs(grad.normalize().dot(viewDir.normalize())) < 0.2f) {
     result.x = 0.0f;
     result.y = 0.0f;
     result.z = 0.0f;

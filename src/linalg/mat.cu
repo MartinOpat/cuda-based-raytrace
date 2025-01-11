@@ -10,19 +10,27 @@ __device__ Vec3 computeGradient(float* volumeData, const int volW, const int vol
     // Normal should point from higher to lower intensities
 
     int xm = max(x - 1, 0);
-    int xp = min(x + 1, volW  - 1);
+    int xp = min(x + 1, volH  - 1);
     int ym = max(y - 1, 0);
-    int yp = min(y + 1, volH - 1);
+    int yp = min(y + 1, volW - 1);
     int zm = max(z - 1, 0);
     int zp = min(z + 1, volD  - 1);
 
     // Note: Assuming data is linearized (idx = z*w*h + y*w + x) TODO: Unlinearize if data not linear
-    float gx = volumeData[z  * volW * volH + y  * volW + xp]
-             - volumeData[z  * volW * volH + y  * volW + xm];
-    float gy = volumeData[z  * volW * volH + yp * volW + x ]
-             - volumeData[z  * volW * volH + ym * volW + x ];
-    float gz = volumeData[zp * volW * volH + y  * volW + x ]
-             - volumeData[zm * volW * volH + y  * volW + x ];
+    // float gx = volumeData[z  * volW * volH + y  * volW + xp]
+    //          - volumeData[z  * volW * volH + y  * volW + xm];
+    // float gy = volumeData[z  * volW * volH + yp * volW + x ]
+    //          - volumeData[z  * volW * volH + ym * volW + x ];
+    // float gz = volumeData[zp * volW * volH + y  * volW + x ]
+    //          - volumeData[zm * volW * volH + y  * volW + x ];
+
+    // Note: Assuming data is linearized (idx = z * W * H + x * W + y;) TODO: Unlinearize if data not linear
+    float gx = volumeData[z  * volW * volH + x  * volW + xp]
+             - volumeData[z  * volW * volH + x  * volW + xm];
+    float gy = volumeData[z  * volW * volH + y  * volW + yp]
+              - volumeData[z  * volW * volH + y  * volW + ym];
+    float gz = volumeData[zp * volW * volH + x  * volW + y ]
+              - volumeData[zm * volW * volH + x  * volW + y ];
 
     return Vec3::init(gx, gy, gz);
 };
