@@ -11,7 +11,6 @@
 #include <iostream>
 #include <curand_kernel.h>
 
-
 // TODO: instead of IMAGEWIDTH and IMAGEHEIGHT this should reflect the windowSize;
 __global__ void raycastKernel(float* volumeData, FrameBuffer framebuffer) {
     int px = blockIdx.x * blockDim.x + threadIdx.x;
@@ -160,9 +159,9 @@ void Raycaster::render() {
   check_cuda_errors(cudaGraphicsMapResources(1, &this->resources));
 	check_cuda_errors(cudaGraphicsResourceGetMappedPointer((void**)&(this->fb->buffer), &(this->fb->buffer_size), resources));
 
-  // FIXME: might not be the best parallelization configuraiton
-	int tx = 16;
-	int ty = 16;
+  // FIXME: might not be the best parallelization configuration
+	int tx = 8;
+	int ty = 8;
 	dim3 threadSize(this->w / tx + 1, this->h / ty + 1);
 	dim3 blockSize(tx, ty);
 

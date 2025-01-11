@@ -6,6 +6,7 @@
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 #include <chrono>
+#include "input/Widget.h"
 
 
 class Window {
@@ -23,6 +24,7 @@ public:
 private:
   GLFWwindow* window;
   std::unique_ptr<Quad> quad;
+  Widget* widget;
 
 	std::chrono::steady_clock::time_point last_frame;
 

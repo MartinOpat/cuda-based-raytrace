@@ -32,13 +32,7 @@ __device__ Vec3 d_cameraUp;
 __device__ Point3 d_lightPos;
 __device__ Color3 d_backgroundColor;
 
-// Point3 h_cameraPos = Point3::init(300.0f, 200.0f, -700.0f);  // Camera for full data set
-Point3 h_cameraPos = Point3::init(50.0f, -50.0f, -75.0f);  // Camera for partially trimmed data set
-Vec3 center = Vec3::init((float)VOLUME_WIDTH/2.0f, (float)VOLUME_HEIGHT/2.0f, (float)VOLUME_DEPTH/2.0f);
-Vec3 h_cameraDir = (center - h_cameraPos).normalize();
 Vec3 h_cameraUp = Vec3::init(0.0, 1.0, 0.0).normalize();
-Point3 h_lightPos = Point3::init(1.5, 2.0, -1.0);
-Color3 h_backgroundColor = Color3::init(0.1f, 0.1f, 0.1f);
 
 
 // Copy the above values to the device
@@ -48,11 +42,6 @@ void copyConstantsToDevice() {
     cudaMemcpyToSymbol(d_stopsGrayscale, h_stopsGrayscale, sizeof(h_stopsGrayscale));
     cudaMemcpyToSymbol(d_stopsBluePurleRed, h_stopsBluePurleRed, sizeof(h_stopsBluePurleRed));
 
-
     // ----------------------- Camera and Light -----------------------
-    cudaMemcpyToSymbol(d_cameraPos, &h_cameraPos, sizeof(Point3));
-    cudaMemcpyToSymbol(d_cameraDir, &h_cameraDir, sizeof(Vec3));
     cudaMemcpyToSymbol(d_cameraUp, &h_cameraUp, sizeof(Vec3));
-    cudaMemcpyToSymbol(d_lightPos, &h_lightPos, sizeof(Point3));
-    cudaMemcpyToSymbol(d_backgroundColor, &h_backgroundColor, sizeof(Color3));
 }
