@@ -78,12 +78,11 @@ int Window::init_quad(float* data) {
 
 
 void Window::free(float* data) {
-  // To preserve the proper destruction order we forcefully set the quads to null (calling their destructor in the process)
+  // To preserve the proper destruction order we forcefully set pointers to null (calling their destructor in the process)
   // Not strictly necessary, but i saw some weird errors on exit without this so best to keep it in.
   this->quad = nullptr;
   this->widget = nullptr;
   cudaFree(data);
-
 
   glfwDestroyWindow(window);
   glfwTerminate();
