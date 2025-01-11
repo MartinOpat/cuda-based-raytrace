@@ -2,7 +2,13 @@
 
 ## How to run
 
-Gui branch was a bit easier to compile using Cmake so to run this branch do:
+First, initialize the imGui submodule:
+```bash
+git submodule init imgui
+git submodule update imgui
+```
+
+Then, compile using cmake:
 ```bash
 mkdir build
 cd build
