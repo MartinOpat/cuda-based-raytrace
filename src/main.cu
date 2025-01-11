@@ -10,6 +10,7 @@
 #include <iostream>
 #include "linalg/linalg.h" 
 #include <vector>
+#include <numeric>
 
 
 static float* d_volume = nullptr;
@@ -21,6 +22,7 @@ static float* d_volume = nullptr;
 
 void getTemperature(std::vector<float>& temperatureData, int idx = 0) {
     std::string path = "data/trimmed";
+    // std::string path = "data";
     std::string variable = "T";
     DataReader dataReader(path, variable);
     size_t dataLength = dataReader.fileLength(idx);
@@ -30,6 +32,7 @@ void getTemperature(std::vector<float>& temperatureData, int idx = 0) {
 
 void getSpeed(std::vector<float>& speedData, int idx = 0) {
     std::string path = "data/trimmed";
+    // std::string path = "data";
     std::string varU = "U";
     std::string varV = "V";
 
@@ -52,26 +55,54 @@ void getSpeed(std::vector<float>& speedData, int idx = 0) {
 
 int main() {
   std::vector<float> data;
-  // getTemperature(data);
-  getSpeed(data);
+  getTemperature(data, 0);
+  // getSpeed(data, 294);
 
+  std::cout << "DATA size: " << data.size() << std::endl;
 
-  // TODO: Eveontually remove debug below (i.e., eliminate for-loop etc.)
-  // Generate debug volume data
+  // TODO: Eventually, we should not need to load the volume like this
   float* hostVolume = new float[VOLUME_WIDTH * VOLUME_HEIGHT * VOLUME_DEPTH];
-  // generateVolume(hostVolume, VOLUME_WIDTH, VOLUME_HEIGHT, VOLUME_DEPTH);
-  for (int i = 0; i < VOLUME_WIDTH * VOLUME_HEIGHT * VOLUME_DEPTH; i++) {  // TODO: This is technically an unnecessary artifact of the old code taking in a float* instead of a std::vector
-    // Discard temperatures above a small star (supposedly, missing temperature values)
-    hostVolume[i] = data[i];
-    if (data[i] + epsilon >= infty) hostVolume[i] = 0.0f;
+  for (int i = 0; i < VOLUME_WIDTH * VOLUME_HEIGHT * VOLUME_DEPTH; i++) {
+    hostVolume[i] = data[i + 0*VOLUME_DEPTH*VOLUME_HEIGHT*VOLUME_WIDTH];
+    // Discard missing values
+    if (data[i + 0*VOLUME_DEPTH*VOLUME_HEIGHT*VOLUME_WIDTH] + epsilon >= infty) hostVolume[i] = -infty;
   }
 
-  // Min-max normalization
-  float minVal = *std::min_element(hostVolume, hostVolume + VOLUME_WIDTH * VOLUME_HEIGHT * VOLUME_DEPTH);
-  float maxVal = *std::max_element(hostVolume, hostVolume + VOLUME_WIDTH * VOLUME_HEIGHT * VOLUME_DEPTH);
-  for (int i = 0; i < VOLUME_WIDTH * VOLUME_HEIGHT * VOLUME_DEPTH; i++) {
-    hostVolume[i] = (hostVolume[i] - minVal) / (maxVal - minVal);
+  // Reverse the order of hostVolume - why is it upside down anyway?
+  for (int i = 0; i < VOLUME_WIDTH; i++) {
+    for (int j = 0; j < VOLUME_HEIGHT; j++) {
+      for (int k = 0; k < VOLUME_DEPTH/2; k++) {
+        float temp = hostVolume[i + j*VOLUME_WIDTH + k*VOLUME_WIDTH*VOLUME_HEIGHT];
+        hostVolume[i + j*VOLUME_WIDTH + k*VOLUME_WIDTH*VOLUME_HEIGHT] = hostVolume[i + j*VOLUME_WIDTH + (VOLUME_DEPTH - 1 - k)*VOLUME_WIDTH*VOLUME_HEIGHT];
+        hostVolume[i + j*VOLUME_WIDTH + (VOLUME_DEPTH - 1 - k)*VOLUME_WIDTH*VOLUME_HEIGHT] = temp;
+      }
+    }
   }
+
+  // Store the half-way up slice data into a file TODO: Remove this debug
+  std::ofstream myfile;
+  myfile.open("halfwayup.txt");
+  for (int i = 0; i < VOLUME_WIDTH; i++) {
+    for (int j = 0; j < VOLUME_HEIGHT; j++) {
+      myfile << hostVolume[i + j*VOLUME_WIDTH + VOLUME_DEPTH/2*VOLUME_WIDTH*VOLUME_HEIGHT] << " ";
+    }
+    myfile << std::endl;
+  }
+  myfile.close();
+
+  // Print min, max, avg., and median values TODO: Remove this debug
+  float minVal = *std::min_element(hostVolume, hostVolume + VOLUME_WIDTH * VOLUME_HEIGHT * VOLUME_DEPTH, [](float a, float b) {
+    if (a <= epsilon) return false;
+    if (b <= epsilon) return true;
+    return a < b;
+  });
+  float maxVal = *std::max_element(hostVolume, hostVolume + VOLUME_WIDTH * VOLUME_HEIGHT * VOLUME_DEPTH);
+  std::cout << "minVal: " << minVal << " maxVal: " << maxVal << std::endl;
+  // // print min, max, avg., and median values <--- the code actually does not work when this snippet is enabled so probably TODO: Delete this later
+  // std::sort(hostVolume, hostVolume + VOLUME_WIDTH * VOLUME_HEIGHT * VOLUME_DEPTH);
+  // float sum = std::accumulate(hostVolume, hostVolume + VOLUME_WIDTH * VOLUME_HEIGHT * VOLUME_DEPTH, 0.0f);
+  // float avg = sum / (VOLUME_WIDTH * VOLUME_HEIGHT * VOLUME_DEPTH);
+  // std::cout << "min: " << hostVolume[0] << " max: " << hostVolume[VOLUME_WIDTH * VOLUME_HEIGHT * VOLUME_DEPTH - 1] << " avg: " << avg << " median: " << hostVolume[VOLUME_WIDTH * VOLUME_HEIGHT * VOLUME_DEPTH / 2] << std::endl;
 
   // Allocate + copy data to GPU
   size_t volumeSize = sizeof(float) * VOLUME_WIDTH * VOLUME_HEIGHT * VOLUME_DEPTH;

@@ -5,10 +5,11 @@
 
 #include "linalg/linalg.h"
 #include "consts.h"
+#include "transferFunction.h"
 #include "cuda_error.h"
-#include "shading.h"
+
 #include <iostream>
-#include "objs/sphere.h"
+#include <curand_kernel.h>
 
 
 // TODO: instead of IMAGEWIDTH and IMAGEHEIGHT this should reflect the windowSize;
@@ -20,14 +21,20 @@ __global__ void raycastKernel(float* volumeData, FrameBuffer framebuffer) {
     float accumR = 0.0f;
     float accumG = 0.0f;
     float accumB = 0.0f;
+    float accumA = 1.0f * (float)SAMPLES_PER_PIXEL;
+
+    // Initialize random state for ray scattering
+    curandState randState;
+    curand_init(1234, px + py * IMAGE_WIDTH, 0, &randState);
 
     // Multiple samples per pixel
     for (int s = 0; s < SAMPLES_PER_PIXEL; s++) {
         // Map to [-1, 1]
-        float u = ((px + 0.5f) / IMAGE_WIDTH ) * 2.0f - 1.0f;
-        float v = ((py + 0.5f) / IMAGE_HEIGHT) * 2.0f - 1.0f;
+        float jitterU = (curand_uniform(&randState) - 0.5f) / IMAGE_WIDTH;
+        float jitterV = (curand_uniform(&randState) - 0.5f) / IMAGE_HEIGHT;
+        float u = ((px + 0.5f + jitterU) / IMAGE_WIDTH ) * 2.0f - 1.0f;
+        float v = ((py + 0.5f + jitterV) / IMAGE_HEIGHT) * 2.0f - 1.0f;
 
-        // TODO: Move this (and all similar transformation code) to its own separate file
         float tanHalfFov = tanf(fov * 0.5f);
         u *= tanHalfFov;
         v *= tanHalfFov;
@@ -37,95 +44,100 @@ __global__ void raycastKernel(float* volumeData, FrameBuffer framebuffer) {
         d_cameraUp = (cameraRight.cross(d_cameraDir)).normalize();
         Vec3 rayDir = (d_cameraDir + cameraRight*u + d_cameraUp*v).normalize();
 
-        // Intersect (for simplicity just a 3D box from 0 to 1 in all dimensions) - TODO: Think about whether this is the best way to do this
+        // Intersect
         float tNear = 0.0f;
         float tFar  = 1e6f;
-        auto intersectAxis = [&](float start, float dirVal) {
-            if (fabsf(dirVal) < epsilon) {
-                if (start < 0.f || start > 1.f) {
-                   tNear = 1e9f;
+        auto intersectAxis = [&](float start, float dir, float minV, float maxV) {
+            if (fabsf(dir) < epsilon) {
+                // Ray parallel to axis. If outside min..max, no intersection.
+                if (start < minV || start > maxV) {
+                    tNear = 1e9f;
                     tFar  = -1e9f;
                 }
             } else {
-                float t0 = (0.0f - start) / dirVal;
-                float t1 = (1.0f - start) / dirVal;
-                if (t0>t1) { 
-                    float tmp=t0; 
-                    t0=t1; 
-                    t1=tmp; 
+                float t0 = (minV - start) / dir;
+                float t1 = (maxV - start) / dir;
+                if (t0 > t1) {
+                    float tmp = t0;
+                    t0 = t1;
+                    t1 = tmp;
                 }
-                if (t0>tNear) tNear = t0;
-                if (t1<tFar ) tFar  = t1;
+                if (t0 > tNear) tNear = t0;
+                if (t1 < tFar ) tFar  = t1;
             }
         };
 
-        intersectAxis(d_cameraPos.x, rayDir.x);
-        intersectAxis(d_cameraPos.y, rayDir.y);
-        intersectAxis(d_cameraPos.z, rayDir.z);
+        intersectAxis(d_cameraPos.x, rayDir.x, 0.0f, (float)VOLUME_HEIGHT);
+        intersectAxis(d_cameraPos.y, rayDir.y, 0.0f, (float)VOLUME_WIDTH);
+        intersectAxis(d_cameraPos.z, rayDir.z, 0.0f, (float)VOLUME_DEPTH);
 
-        if (tNear > tFar) continue;  // No intersectionn
-        if (tNear < 0.0f) tNear = 0.0f;
+        if (tNear > tFar) {
+          // No intersection -> Set to brackground color (multiply by SAMPLES_PER_PIXEL because we divide by it later)
+          accumR = d_backgroundColor.x * (float)SAMPLES_PER_PIXEL;
+          accumG = d_backgroundColor.y * (float)SAMPLES_PER_PIXEL;
+          accumB = d_backgroundColor.z * (float)SAMPLES_PER_PIXEL;
+          accumA = 1.0f * (float)SAMPLES_PER_PIXEL;
+          
+        } else {
+          if (tNear < 0.0f) tNear = 0.0f;
 
-        float colorR = 0.0f, colorG = 0.0f, colorB = 0.0f;
-        float alphaAccum = 0.0f;
+          float colorR = 0.0f, colorG = 0.0f, colorB = 0.0f;
+          float alphaAccum = 0.0f;
 
-        float tCurrent = tNear;
-        while (tCurrent < tFar && alphaAccum < alphaAcumLimit) {
-            Point3 pos = d_cameraPos + rayDir * tCurrent;
+          float t = tNear;  // Front to back
+          while (t < tFar && alphaAccum < alphaAcumLimit) {
+              Point3 pos = d_cameraPos + rayDir * t;
 
-            // Convert to volume indices
-            float fx = pos.x * (VOLUME_WIDTH  - 1);
-            float fy = pos.y * (VOLUME_HEIGHT - 1);
-            float fz = pos.z * (VOLUME_DEPTH  - 1);
-            int ix = (int)roundf(fx);
-            int iy = (int)roundf(fy);
-            int iz = (int)roundf(fz);
+              // Convert to volume indices
+              int ix = (int)roundf(pos.x);
+              int iy = (int)roundf(pos.y);
+              int iz = (int)roundf(pos.z);
 
-            // Sample
-            float density = sampleVolumeNearest(volumeData, VOLUME_WIDTH, VOLUME_HEIGHT, VOLUME_DEPTH, ix, iy, iz);
+              // Sample (pick appropriate method based on volume size) TODO: Add a way to pick this in GUI
+              // float density = sampleVolumeNearest(volumeData, VOLUME_WIDTH, VOLUME_HEIGHT, VOLUME_DEPTH, ix, iy, iz);
+              float density = sampleVolumeTrilinear(volumeData, VOLUME_WIDTH, VOLUME_HEIGHT, VOLUME_DEPTH, pos.x, pos.y, pos.z);
 
-            // Basic transfer function. TODO: Move to a separate file, and then improve
-            float alphaSample = density * 0.1f;
-            // float alphaSample = 1.0f - expf(-density * 0.1f);
-            Color3 baseColor = Color3::init(density, 0.1f*density, 1.f - density);  // TODO: Implement a proper transfer function
-
-            // If density ~ 0, skip shading
-            if (density > minAllowedDensity) {
+              // If density ~ 0, skip shading
+              if (density > minAllowedDensity) {
                 Vec3 grad = computeGradient(volumeData, VOLUME_WIDTH, VOLUME_HEIGHT, VOLUME_DEPTH, ix, iy, iz);
-                Vec3 normal = -grad.normalize();
+                float4 color = transferFunction(density, grad, pos, rayDir);  // This already returns the alpha-weighted color
 
-                Vec3 lightDir = (d_lightPos - pos).normalize();
-                Vec3 viewDir  = -rayDir.normalize();
+                //Accumulate color, and alpha
+                colorR = (1.0f - alphaAccum) * color.x + colorR;
+                colorG = (1.0f - alphaAccum) * color.y + colorG;
+                colorB = (1.0f - alphaAccum) * color.z + colorB;
+                alphaAccum = (1 - alphaAccum) * color.w + alphaAccum;
 
-                // Apply Phong
-                Vec3 shadedColor = phongShading(normal, lightDir, viewDir, baseColor);
+              }
 
-                // Compose
-                colorR     += (1.0f - alphaAccum) * shadedColor.x * alphaSample;
-                colorG     += (1.0f - alphaAccum) * shadedColor.y * alphaSample;
-                colorB     += (1.0f - alphaAccum) * shadedColor.z * alphaSample;
-                alphaAccum += (1.0f - alphaAccum) * alphaSample;
-            }
 
-            tCurrent += stepSize;
+              t += stepSize;
+          }
+
+
+          // Calculate final colour
+          accumR += colorR;
+          accumG += colorG;
+          accumB += colorB;
+          accumA += alphaAccum;
+
+          // Blend with background (for transparency)
+          float leftover = 1.0 - alphaAccum;
+          accumR = accumR + leftover * d_backgroundColor.x;
+          accumG = accumG + leftover * d_backgroundColor.y;
+          accumB = accumB + leftover * d_backgroundColor.z;
         }
-
-        accumR += colorR;
-        accumG += colorG;
-        accumB += colorB;
     }
+
 
     // Average samples
     accumR /= (float)SAMPLES_PER_PIXEL;
     accumG /= (float)SAMPLES_PER_PIXEL;
     accumB /= (float)SAMPLES_PER_PIXEL;
+    accumA /= (float)SAMPLES_PER_PIXEL;
 
     // Final colour
-    framebuffer.writePixel(px, py, accumR, accumG, accumB);
-    // int fbIndex = (py * IMAGE_WIDTH + px) * 3;
-    // framebuffer[fbIndex + 0] = (unsigned char)(fminf(accumR, 1.f) * 255);
-    // framebuffer[fbIndex + 1] = (unsigned char)(fminf(accumG, 1.f) * 255);
-    // framebuffer[fbIndex + 2] = (unsigned char)(fminf(accumB, 1.f) * 255);
+    framebuffer.writePixel(px, py, accumR, accumG, accumB, accumA);
 }
 
 

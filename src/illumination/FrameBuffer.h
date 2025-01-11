@@ -14,7 +14,7 @@ public:
   unsigned int h;
 
   __host__ FrameBuffer(unsigned int w, unsigned int h);
-  __device__ void writePixel(int x, int y, float r, float g, float b);
+  __device__ void writePixel(int x, int y, float r, float g, float b, float a);
 };
 
 #endif // FRAMEBUFFER_H
