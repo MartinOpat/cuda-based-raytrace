@@ -15,15 +15,10 @@
 
 static float* d_volume = nullptr;
 
-// FIXME: segfaults on window resize - the problem is _not_ in the raycasting function
-
 // TODO: general
-// * very similarly - actual code for loading new data as the simulation progresses - right now its effectively a static image loader * pause button once that dataloading is implemented 
-
+// * actual code for loading new data as the simulation progresses - right now its effectively a static image loader
 // * save frames to file while running program -> then export to gif on close.
 // * time controls - arbitrary skipping to specified point (would require some changes to gpubuffer) (could have)
-
-// * transfer function -> move the code in raycastkernel to its own class and add silhouette detection here as well.
 
 void getTemperature(std::vector<float>& temperatureData, int idx = 0) {
     std::string path = "data/trimmed";

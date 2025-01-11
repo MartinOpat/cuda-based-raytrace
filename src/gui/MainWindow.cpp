@@ -24,11 +24,10 @@ Window::Window(unsigned int w, unsigned int h) {
 }
 
 void framebuffer_size_callback(GLFWwindow* window, int w, int h) {
-  // This function is called by glfw when the window is reized.
+  // This function is called by glfw when the window is resized.
   glViewport(0 , 0, w, h);
   Window* newWin = reinterpret_cast<Window*>(glfwGetWindowUserPointer(window));
   newWin->resize(w, h);
-
 }
 
 int Window::init(float* data) {
@@ -48,6 +47,7 @@ int Window::init(float* data) {
   }
 
 	glfwMakeContextCurrent(this->window);
+	glfwSetWindowUserPointer(this->window, reinterpret_cast<void*>(this));
 
   // init glad(opengl)
   if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
