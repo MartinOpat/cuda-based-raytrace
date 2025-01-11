@@ -48,6 +48,20 @@ extern __device__ Vec3 d_cameraDir;
 extern __device__ Vec3 d_cameraUp;
 extern __device__ Point3 d_lightPos;
 
+
+// --------------------------- Transfer Function Constants ---------------------------
+struct ColorStop {
+    float pos;       // in [0,1]  
+    Color3 color;
+};
+
+const int lenStopsPythonLike = 5;
+const int lenStopsGrayscale = 2;
+const int lenStopsBluePurpleRed = 3;
+extern __constant__ ColorStop d_stopsPythonLike[5];
+extern __constant__ ColorStop d_stopsGrayscale[2];
+extern __constant__ ColorStop d_stopsBluePurleRed[3];
+
 // --------------------------- Functions for handling external constants ---------------------------
 void copyConstantsToDevice();
 
