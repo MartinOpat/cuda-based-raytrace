@@ -2,6 +2,7 @@
 #define MAT_H
 
 #include "vec.h"
+#include "consts.h"
 
 __device__ Vec3 computeGradient(float* volumeData, const int volW, const int volH, const int volD, int x, int y, int z);
 
