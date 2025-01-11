@@ -68,7 +68,7 @@ int main() {
     if (data[i + 0*VOLUME_DEPTH*VOLUME_HEIGHT*VOLUME_WIDTH] + epsilon >= infty) hostVolume[i] = -infty;
   }
 
-  // Reverse the order of hostVolume TODO: Idk why the volume upside down, this can probably be deleted and substituted with a minus sign somehwere (camera position?)
+  // Reverse the order of hostVolume - why is it upside down anyway?
   for (int i = 0; i < VOLUME_WIDTH; i++) {
     for (int j = 0; j < VOLUME_HEIGHT; j++) {
       for (int k = 0; k < VOLUME_DEPTH/2; k++) {
