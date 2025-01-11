@@ -14,30 +14,6 @@
 // TODO: Probbably move this transfer function business into a different file
 // Samples the voxel nearest to the given coordinates. TODO: Can be re-used in other places so move
 __device__ float sampleVolumeNearest(float* volumeData, const int volW, const int volH, const int volD, int vx, int vy, int vz) {
-    // TODO: I actually do not know which screen coordinates corresponds to which volume coordinates ... so let's try all options
-
-    // x <-> width, y <-> height, z <-> depth
-    // if (vx < 0) vx = 0;
-    // if (vy < 0) vy = 0;
-    // if (vz < 0) vz = 0;
-    // if (vx >= volW) vx = volW  - 1;
-    // if (vy >= volH) vy = volH - 1;
-    // if (vz >= volD) vz = volD  - 1;
-
-    // int idx = vz * volW * volH + vy * volD + vx;
-    // return volumeData[idx];
-
-    // x <-> width, y <-> depth, z <-> height
-    // if (vx < 0) vx = 0;
-    // if (vy < 0) vy = 0;
-    // if (vz < 0) vz = 0;
-    // if (vx >= volW) vx = volW  - 1;
-    // if (vy >= volH) vy = volH - 1;
-    // if (vz >= volD) vz = volD  - 1;
-
-    // int idx = vy * volW * volD + vz * volW + vx;
-    // return volumeData[idx];
-
     // x <-> height, y <-> width, z <-> depth <--- So far this is the best one
     if (vx < 0) vx = 0;
     if (vy < 0) vy = 0;
@@ -48,41 +24,6 @@ __device__ float sampleVolumeNearest(float* volumeData, const int volW, const in
 
     int idx = vz * volW * volH + vx * volW + vy;
     return volumeData[idx];
-
-    // x <-> height, y <-> depth, z <-> width
-    // if (vx < 0) vx = 0;
-    // if (vy < 0) vy = 0;
-    // if (vz < 0) vz = 0;
-    // if (vx >= volH) vx = volH  - 1;
-    // if (vy >= volD) vy = volD - 1;
-    // if (vz >= volW) vz = volW  - 1;
-
-    // int idx = vy * volW * volH + vz * volW + vx;
-    // return volumeData[idx];
-
-
-    // x <-> depth, y <-> width, z <-> height
-    // if (vx < 0) vx = 0;
-    // if (vy < 0) vy = 0;
-    // if (vz < 0) vz = 0;
-    // if (vx >= volD) vx = volD  - 1;
-    // if (vy >= volW) vy = volW - 1;
-    // if (vz >= volH) vz = volH  - 1;
-
-    // int idx = vz * volD * volW + vx * volW + vy;
-    // return volumeData[idx];
-
-    // x <-> depth, y <-> height, z <-> width
-    // if (vx < 0) vx = 0;
-    // if (vy < 0) vy = 0;
-    // if (vz < 0) vz = 0;
-    // if (vx >= volD) vx = volD  - 1;
-    // if (vy >= volH) vy = volH - 1;
-    // if (vz >= volW) vz = volW  - 1;
-
-    // int idx = vy * volD * volW + vz * volD + vx;
-    // return volumeData[idx];
-
 }
 
 // tri-linear interpolation - ready if necessary (but no visible improvement for full volume)
