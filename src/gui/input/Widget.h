@@ -18,6 +18,7 @@ public:
   bool renderOnce;
   char* fps;
 
+  int tfComboSelected;
   int opacityK;
   float opacityKReal;
   float sigmoidOne;

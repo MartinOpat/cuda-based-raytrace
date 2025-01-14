@@ -63,6 +63,8 @@ extern __device__ float d_opacityK;
 // sigmoid function variables
 extern __device__ float d_sigmoidOne;
 extern __device__ float d_sigmoidTwo;
+// combo box index
+extern __device__ int d_tfComboSelected;
 
 const int lenStopsPythonLike = 5;
 const int lenStopsGrayscale = 2;

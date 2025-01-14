@@ -29,9 +29,12 @@ Widget::Widget(GLFWwindow* window) {
   this->opacityK = 0;
   this->sigmoidOne = 0.5f;
   this->sigmoidTwo = -250.0f;
+  this->tfComboSelected = 0;
 };
 
-// TODO: can be marginally improvement by only copying changed values to device - however we're dealing with individual floats here so i dont think the benefit would be all that obvious.
+// REFACTOR: should probably not have all the logic in one function; something like a list of ImplementedWidgets with each a Render() function (a la interface) would be better.
+// TODO: can be marginally improved by only copying changed values to device - however we're dealing with individual floats here so i dont think the benefit would be all that obvious.
+// TODO: wrap basically all ImGui calls in if statements; better form + allows for checking return values / errors.
 void Widget::tick(double fps) {
   if (this->renderOnce) {
     this->renderOnce = false;
@@ -49,6 +52,23 @@ void Widget::tick(double fps) {
   ImGui::DragInt("k (log [1e-10, 1])", &this->opacityK, 1, 0, 100, "%d%%", ImGuiSliderFlags_AlwaysClamp);
   ImGui::DragFloat("sigmoidOne", &this->sigmoidOne, 0.01f, 0.0f, 1.0f, "%.2f");
   ImGui::InputFloat("sigmoidTwo", &this->sigmoidTwo, 10.0f, 100.0f, "%.0f");
+  
+  // the items[] contains the entries for the combobox. The selected index is stored as an int on this->tfComboSelected
+  // the default entry is set in the constructor, so if you want that to be a specific entry just change it
+  // whatever value is selected here is available on the gpu as d_tfComboSelected.
+  const char* items[] = {"First option", "Another option", "this is the third option", "..."};
+  if (ImGui::BeginCombo("ComboBox for transferFunction", items[this->tfComboSelected]))
+  {
+    for (int n = 0; n < IM_ARRAYSIZE(items); n++)
+    {
+      const bool is_selected = (this->tfComboSelected == n);
+      if (ImGui::Selectable(items[n], is_selected))
+        this->tfComboSelected = n;
+      if (is_selected)
+        ImGui::SetItemDefaultFocus();
+    }
+    ImGui::EndCombo();
+  }
   ImGui::End();
 
   ImGui::Begin("Light Controls");
@@ -97,6 +117,7 @@ void Widget::copyToDevice() {
 
   cudaMemcpyToSymbol(&d_sigmoidOne, &this->sigmoidOne, sizeof(float));
   cudaMemcpyToSymbol(&d_sigmoidTwo, &this->sigmoidTwo, sizeof(float));
+  cudaMemcpyToSymbol(&d_tfComboSelected, &this->tfComboSelected, sizeof(float));
 }
 
 Widget::~Widget() {
