@@ -51,17 +51,17 @@ void Widget::tick(double fps) {
   float min = -1, max = 1;
 
   ImGui::Begin("Transfer Function Controls");
-  ImGui::DragInt("Gradient exp. (log [1e-10, 1])", &this->opacityK, 1, 0, 100, "%d%%", ImGuiSliderFlags_AlwaysClamp);
-  ImGui::DragFloat("sigmoidShift", &this->sigmoidShift, 0.01f, 0.0f, 1.0f, "%.2f");
-  ImGui::InputFloat("sigmoidExp", &this->sigmoidExp, 10.0f, 100.0f, "%.0f");
-  ImGui::DragFloat("Alpha accumulation limit", &this->alphaAcumLimit, 0.01f, 0.0f, 1.0f, "%.2f");
-  ImGui::DragInt("Opacity constant (log [1e-5, 1])", &this->opacityConst, 1, 0, 100, "%d%%", ImGuiSliderFlags_AlwaysClamp);
+  ImGui::DragInt("Grad. exp. (log [1e-10, 1])", &this->opacityK, 1, 0, 100, "%d%%", ImGuiSliderFlags_AlwaysClamp);
+  ImGui::DragFloat("Sig. shift", &this->sigmoidShift, 0.01f, 0.0f, 1.0f, "%.2f");
+  ImGui::InputFloat("Sig. sxp", &this->sigmoidExp, 10.0f, 100.0f, "%.0f");
+  ImGui::DragFloat("Alpha accum. limit", &this->alphaAcumLimit, 0.01f, 0.0f, 1.0f, "%.2f");
+  ImGui::DragInt("Opacity const. (log [1e-5, 1])", &this->opacityConst, 1, 0, 100, "%d%%", ImGuiSliderFlags_AlwaysClamp);
   
   // the items[] contains the entries for the combobox. The selected index is stored as an int on this->tfComboSelected
   // the default entry is set in the constructor, so if you want that to be a specific entry just change it
   // whatever value is selected here is available on the gpu as d_tfComboSelected.
   const char* items[] = {"Opacity - gradient", "Opacity - sigmoid", "Opacity - constant", "..."};
-  if (ImGui::BeginCombo("ComboBox for transferFunction", items[this->tfComboSelected])) {
+  if (ImGui::BeginCombo("Transfer function", items[this->tfComboSelected])) {
     for (int n = 0; n < IM_ARRAYSIZE(items); n++) {
       const bool is_selected = (this->tfComboSelected == n);
       if (ImGui::Selectable(items[n], is_selected))
@@ -74,7 +74,7 @@ void Widget::tick(double fps) {
 
   // Same comments as above apply
   const char* items2[] = {"Python-like", "BPR", "Greyscale", "..."};
-  if (ImGui::BeginCombo("ComboBox for color map", items2[this->tfComboSelectedColor])) {
+  if (ImGui::BeginCombo("Color map", items2[this->tfComboSelectedColor])) {
     for (int n = 0; n < IM_ARRAYSIZE(items2); n++) {
       const bool is_selected = (this->tfComboSelectedColor == n);
       if (ImGui::Selectable(items2[n], is_selected))
