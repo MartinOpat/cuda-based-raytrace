@@ -1,29 +1,40 @@
 #include "mat.h"
+#include "consts.h"
+
 #include <vector>
 #include <algorithm>
 
 using namespace std;
 
-__device__ Vec3 computeGradient(float* volumeData, const int volW, const int volH, const int volD, int x, int y, int z) {
-    // Finite difference for partial derivatives.
+// Samples the voxel nearest to the given coordinates.
+__device__ float sampleVolumeNearest(float* volumeData, const int volW, const int volH, const int volD, int vx, int vy, int vz) {
     // For boundary voxels - clamp to the boundary. 
+    if (vx < 0) vx = 0;
+    if (vy < 0) vy = 0;
+    if (vz < 0) vz = 0;
+    if (vx >= volH) vx = volH  - 1;
+    if (vy >= volW) vy = volW - 1;
+    if (vz >= volD) vz = volD  - 1;
 
-    int xm = max(x - 1, 0);
-    int xp = min(x + 1, volH  - 1);
-    int ym = max(y - 1, 0);
-    int yp = min(y + 1, volW - 1);
-    int zm = max(z - 1, 0);
-    int zp = min(z + 1, volD  - 1);
+    // x <-> height, y <-> width, z <-> depth
+    int idx = vz * volW * volH + vx * volW + vy;
+    return volumeData[idx];
+}
 
-    // Note: Assuming data is linearized (idx = z * W * H + x * W + y;) TODO: Unlinearize if data not linear
-    float gx = volumeData[z  * volW * volH + xp  * volW + y]
-             - volumeData[z  * volW * volH + xm  * volW + y];
-    float gy = volumeData[z  * volW * volH + x  * volW + yp]
-              - volumeData[z  * volW * volH + x  * volW + ym];
-    float gz = volumeData[zp * volW * volH + x  * volW + y ]
-              - volumeData[zm * volW * volH + x  * volW + y ];
+__device__ Vec3 computeGradient(float* volumeData, const int volW, const int volH, const int volD, int vx, int vy, int vz) {
+    // Finite difference for partial derivatives.
+    
 
-    return Vec3::init(gx, gy, gz);
+    float dfdx = (sampleVolumeNearest(volumeData, VOLUME_WIDTH, VOLUME_HEIGHT, VOLUME_DEPTH, vx + 1, vy, vz) -
+                  sampleVolumeNearest(volumeData, VOLUME_WIDTH, VOLUME_HEIGHT, VOLUME_DEPTH, vx - 1, vy, vz)) / (2.0f * DLAT);  // x => height => lat
+
+    float dfdy = (sampleVolumeNearest(volumeData, VOLUME_WIDTH, VOLUME_HEIGHT, VOLUME_DEPTH, vx, vy + 1, vz) -
+                  sampleVolumeNearest(volumeData, VOLUME_WIDTH, VOLUME_HEIGHT, VOLUME_DEPTH, vx, vy - 1, vz)) / (2.0f * DLON);  // y => width => lon
+
+    float dfdz = (sampleVolumeNearest(volumeData, VOLUME_WIDTH, VOLUME_HEIGHT, VOLUME_DEPTH, vx, vy, vz + 1) -
+                  sampleVolumeNearest(volumeData, VOLUME_WIDTH, VOLUME_HEIGHT, VOLUME_DEPTH, vx, vy, vz - 1)) / (2.0f * DLEV);
+
+    return Vec3::init(dfdx, dfdy, dfdz);
 };
 
 // TESTING: haven't tested this function at all tbh

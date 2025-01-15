@@ -4,20 +4,6 @@
 #include <stdio.h>
 
 
-// Samples the voxel nearest to the given coordinates.
-__device__ float sampleVolumeNearest(float* volumeData, const int volW, const int volH, const int volD, int vx, int vy, int vz) {
-    // x <-> height, y <-> width, z <-> depth <--- So far this is the best one
-    if (vx < 0) vx = 0;
-    if (vy < 0) vy = 0;
-    if (vz < 0) vz = 0;
-    if (vx >= volH) vx = volH  - 1;
-    if (vy >= volW) vy = volW - 1;
-    if (vz >= volD) vz = volD  - 1;
-
-    int idx = vz * volW * volH + vx * volW + vy;
-    return volumeData[idx];
-}
-
 // tri-linear interpolation - ready if necessary (but no visible improvement for full volume)
 __device__ float sampleVolumeTrilinear(float* volumeData, const int volW, const int volH, const int volD, float fx, float fy, float fz) {
     int ix = (int)floorf(fx);
