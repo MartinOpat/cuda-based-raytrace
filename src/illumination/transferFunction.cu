@@ -40,17 +40,35 @@ __device__ float4 transferFunction(float density, const Vec3& grad, const Point3
   
   // --------------------------- Sample the volume ---------------------------
   // TODO: Somehow pick if to use temp of speed normalization ... or pass extremas as params.
-  float normDensity = (density - MIN_TEMP) / (MAX_TEMP - MIN_TEMP);
+  // float normDensity = (density - MIN_TEMP) / (MAX_TEMP - MIN_TEMP);
+  float normDensity = (density - 273) / (MAX_TEMP - MIN_TEMP)+16.f/21.f;  // Make zero match Celsius zero
+
   // float normDensity = (density - MIN_SPEED) / (MAX_SPEED - MIN_SPEED);
 
   normDensity = clamp(normDensity, 0.0f, 1.0f);
 
   // --------------------------- Map density to color ---------------------------
-  // TODO: Add a way to pick stops here
-  Color3 baseColor = colorMap(normDensity, d_stopsPythonLike, lenStopsPythonLike);
+  // Pick color map
+  Color3 baseColor;
+  switch (d_tfComboSelectedColor) {
+  case 0:
+    baseColor = colorMap(normDensity, d_stopsPythonLike, lenStopsPythonLike);
+    break;
+  
+  case 1:
+    baseColor = colorMap(normDensity, d_stopsBluePurleRed, lenStopsBluePurpleRed);
+    break;
 
-  // TODO: This is a Gui select element
-  // TODO: Add a way to pick different function for alpha
+  case 2:
+    baseColor = colorMap(normDensity, d_stopsGrayscale, lenStopsGrayscale);
+    break;
+
+  default:
+    baseColor = colorMap(normDensity, d_stopsPythonLike, lenStopsPythonLike);
+    break;
+  }
+
+  // Pick opacity function
   float alpha;
   switch (d_tfComboSelected) {
   case 0:

@@ -69,6 +69,7 @@ extern __device__ float d_sigmoidShift;
 extern __device__ float d_sigmoidExp;
 // combo box index
 extern __device__ int d_tfComboSelected;
+extern __device__ int d_tfComboSelectedColor;
 // constant opacity option
 extern __device__ float d_opacityConst;
 

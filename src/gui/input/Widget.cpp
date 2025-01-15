@@ -71,6 +71,21 @@ void Widget::tick(double fps) {
     }
     ImGui::EndCombo();
   }
+
+  // Same comments as above apply
+  const char* items2[] = {"Python-like", "BPR", "Greyscale", "..."};
+  if (ImGui::BeginCombo("ComboBox for color map", items2[this->tfComboSelectedColor]))
+  {
+    for (int n = 0; n < IM_ARRAYSIZE(items2); n++)
+    {
+      const bool is_selected = (this->tfComboSelectedColor == n);
+      if (ImGui::Selectable(items2[n], is_selected))
+        this->tfComboSelectedColor = n;
+      if (is_selected)
+        ImGui::SetItemDefaultFocus();
+    }
+    ImGui::EndCombo();
+  }
   ImGui::End();
 
   ImGui::Begin("Light Controls");
@@ -119,10 +134,12 @@ void Widget::copyToDevice() {
 
   cudaMemcpyToSymbol(&d_sigmoidShift, &this->sigmoidShift, sizeof(float));
   cudaMemcpyToSymbol(&d_sigmoidExp, &this->sigmoidExp, sizeof(float));
-  cudaMemcpyToSymbol(&d_tfComboSelected, &this->tfComboSelected, sizeof(float));
+  cudaMemcpyToSymbol(&d_tfComboSelected, &this->tfComboSelected, sizeof(int));
 
   this->opacityConstReal = std::pow(10.0f, (-5 + 0.05 * this->opacityConst));
   cudaMemcpyToSymbol(&d_opacityConst, &this->opacityConstReal, sizeof(float));
+
+  cudaMemcpyToSymbol(&d_tfComboSelectedColor, &this->tfComboSelectedColor, sizeof(int));
 }
 
 Widget::~Widget() {

@@ -19,6 +19,7 @@ public:
   char* fps;
 
   int tfComboSelected;
+  int tfComboSelectedColor;
   int opacityK;
   float opacityKReal;
   float sigmoidShift;
