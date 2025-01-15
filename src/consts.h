@@ -23,7 +23,7 @@ const float DLAT = 35.0f / VOLUME_HEIGHT;  // 35 for current trimmed data set ra
 const float DLEV = 1000.0f / VOLUME_DEPTH;  // 1000 from max pressure (hPa) but not sure here
 
 const float MIN_TEMP = 210.0f;
-const float MAX_TEMP = 240.0f;
+const float MAX_TEMP = 293.0f;
 
 const float MIN_SPEED = 0.0F;
 const float MAX_SPEED = 14.0f;
