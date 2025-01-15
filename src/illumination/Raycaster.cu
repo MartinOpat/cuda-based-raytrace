@@ -92,7 +92,7 @@ __global__ void raycastKernel(float* volumeData, FrameBuffer framebuffer, const 
               int iy = (int)roundf(pos.y);
               int iz = (int)roundf(pos.z);
 
-              // Sample (pick appropriate method based on volume size) TODO: Add a way to pick this in GUI
+              // Sample (pick appropriate method based on volume size) TODO: Consider adding a way to pick this in GUI (?)
               // float density = sampleVolumeNearest(volumeData, VOLUME_WIDTH, VOLUME_HEIGHT, VOLUME_DEPTH, ix, iy, iz);
               float density = sampleVolumeTrilinear(volumeData, VOLUME_WIDTH, VOLUME_HEIGHT, VOLUME_DEPTH, pos.x, pos.y, pos.z);
 

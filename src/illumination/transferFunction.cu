@@ -5,9 +5,10 @@
 
 
 
-__device__ float opacityFromGradient(const Vec3 &grad) {
+__device__ float opacityFromGradient(const Vec3 &grad, const Vec3& rayDir) {
     float gradMag = grad.length();
-    float alpha = 1.0f - expf(-d_opacityK * gradMag);  // TODO: This parameter probably has the wrong scale
+    // float gradMag = grad.length()*(1-fabs(grad.normalize().dot(rayDir)));  // Alternative, but not particularly better
+    float alpha = 1.0f - expf(-d_opacityK * gradMag);
     return alpha;
 }
 
@@ -39,7 +40,7 @@ __device__ Color3 colorMap(float normalizedValues, const ColorStop stops[], int 
 __device__ float4 transferFunction(float density, const Vec3& grad, const Point3& pos, const Vec3& rayDir) {
   
   // --------------------------- Sample the volume ---------------------------
-  // TODO: Somehow pick if to use temp of speed normalization ... or pass extremas as params.
+  // TODO: Somehow pick if to use temp of speed normalization ... or pass extremas as params. <-If we decide to visualize more than 1 type of data
   // float normDensity = (density - MIN_TEMP) / (MAX_TEMP - MIN_TEMP);
   float normDensity = (density - 273) / (MAX_TEMP - MIN_TEMP)+16.f/21.f;  // Make zero match Celsius zero
 
@@ -72,7 +73,7 @@ __device__ float4 transferFunction(float density, const Vec3& grad, const Point3
   float alpha;
   switch (d_tfComboSelected) {
   case 0:
-    alpha = opacityFromGradient(grad);
+    alpha = opacityFromGradient(grad, rayDir);
     break;
   
   case 1:
@@ -110,7 +111,7 @@ __device__ float4 transferFunction(float density, const Vec3& grad, const Point3
     result.x = 0.0f;
     result.y = 0.0f;
     result.z = 0.0f;
-    result.w = alpha;  // TODO: Figure out what to do about silhouettes either only on top or not at all
+    result.w = alpha;
   }
 
   return result;

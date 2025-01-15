@@ -3,7 +3,7 @@
 #include <cuda_runtime.h>
 #include <cmath>
 
-struct Vec3 {  // TODO: Maybe make this into a class ... maybe
+struct Vec3 {
     double x, y, z;
 
     static __host__ __device__ Vec3 init(double x, double y, double z) {Vec3 v = {x, y, z}; return v;}
