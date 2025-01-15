@@ -7,7 +7,7 @@
 
 __device__ float opacityFromGradient(const Vec3 &grad) {
     float gradMag = grad.length();
-    float alpha = 1.0f - expf(-1 * gradMag);  // TODO: This parameter probably has the wrong scale
+    float alpha = 1.0f - expf(-d_opacityK * gradMag);  // TODO: This parameter probably has the wrong scale
     return alpha;
 }
 
@@ -51,12 +51,26 @@ __device__ float4 transferFunction(float density, const Vec3& grad, const Point3
 
   // TODO: This is a Gui select element
   // TODO: Add a way to pick different function for alpha
-  float alpha = opacityFromGradient(grad);
-  // alpha = 0.1f;
-//   alpha = opacitySigmoid(normDensity);
-  // alpha = (1.0f - fabs(grad.normalize().dot(rayDir.normalize()))) * 0.8f + 0.2f;
+  float alpha;
+  switch (d_tfComboSelected) {
+  case 0:
+    alpha = opacityFromGradient(grad);
+    break;
+  
+  case 1:
+    alpha = opacitySigmoid(normDensity);
+    break;
 
-  float alphaSample = density * alpha * 0.1;
+  case 2:
+    alpha = 0.1f;
+    break;
+  
+  default:
+    alpha = 1.0f;  // This should not be reached anyway
+    break;
+  }
+
+  float alphaSample = density * alpha * 0.1;  // TODO: Why is this still 0.1?
 
   // --------------------------- Shading ---------------------------
   // Apply Phong

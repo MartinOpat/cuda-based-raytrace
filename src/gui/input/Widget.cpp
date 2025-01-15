@@ -49,14 +49,14 @@ void Widget::tick(double fps) {
   float min = -1, max = 1;
 
   ImGui::Begin("Transfer Function Controls");
-  ImGui::DragInt("k (log [1e-10, 1])", &this->opacityK, 1, 0, 100, "%d%%", ImGuiSliderFlags_AlwaysClamp);
+  ImGui::DragInt("Gradient exp. (log [1e-10, 1])", &this->opacityK, 1, 0, 100, "%d%%", ImGuiSliderFlags_AlwaysClamp);
   ImGui::DragFloat("sigmoidShift", &this->sigmoidShift, 0.01f, 0.0f, 1.0f, "%.2f");
   ImGui::InputFloat("sigmoidExp", &this->sigmoidExp, 10.0f, 100.0f, "%.0f");
   
   // the items[] contains the entries for the combobox. The selected index is stored as an int on this->tfComboSelected
   // the default entry is set in the constructor, so if you want that to be a specific entry just change it
   // whatever value is selected here is available on the gpu as d_tfComboSelected.
-  const char* items[] = {"First option", "Another option", "this is the third option", "..."};
+  const char* items[] = {"Opacity - gradient", "Opacity - sigmoid", "Opacity - constant", "..."};
   if (ImGui::BeginCombo("ComboBox for transferFunction", items[this->tfComboSelected]))
   {
     for (int n = 0; n < IM_ARRAYSIZE(items); n++)
