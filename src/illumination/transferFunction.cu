@@ -7,7 +7,7 @@
 
 __device__ float opacityFromGradient(const Vec3 &grad) {
     float gradMag = grad.length();
-    float alpha = 1.0f - expf(-d_opacityK * gradMag);
+    float alpha = 1.0f - expf(-d_opacityK * gradMag);  // TODO: This parameter probably has the wrong scale
     return alpha;
 }
 
@@ -53,7 +53,7 @@ __device__ float4 transferFunction(float density, const Vec3& grad, const Point3
   // TODO: Add a way to pick different function for alpha
   float alpha = opacityFromGradient(grad);
   // alpha = 0.1f;
-  alpha = opacitySigmoid(normDensity);
+//   alpha = opacitySigmoid(normDensity);
   // alpha = (1.0f - fabs(grad.normalize().dot(rayDir.normalize()))) * 0.8f + 0.2f;
 
   float alphaSample = density * alpha * 0.1;
@@ -63,7 +63,7 @@ __device__ float4 transferFunction(float density, const Vec3& grad, const Point3
   Vec3 normal = -grad.normalize();
   Vec3 lightDir = (d_lightPos - pos).normalize();
   Vec3 viewDir  = -rayDir.normalize();
-  Vec3 shadedColor = phongShading(normal, lightDir, viewDir, baseColor);  // TODO: Fix pixelated
+  Vec3 shadedColor = phongShading(normal, lightDir, viewDir, baseColor);  // TODO: Check if still pixelated
 
   // Compose
   float4 result;
@@ -78,7 +78,7 @@ __device__ float4 transferFunction(float density, const Vec3& grad, const Point3
     result.x = 0.0f;
     result.y = 0.0f;
     result.z = 0.0f;
-    result.w = 1.0f;
+    result.w = alpha;  // TODO: Figure out what to do about silhouettes either only on top or not at all
   }
 
   return result;
