@@ -30,9 +30,6 @@ const float MAX_SPEED = 14.0f;
 
 
 // --------------------------- Raycasting Constants ---------------------------
-const int SAMPLES_PER_PIXEL = 4;
-
-// const float alphaAcumLimit = 0.4f;   // TODO: Atm, this only works with sigmoid
 const float minAllowedDensity = 0.001f;
 
 const float stepSize = 0.02f;
@@ -74,6 +71,8 @@ extern __device__ int d_tfComboSelected;
 extern __device__ int d_tfComboSelectedColor;
 // constant opacity option
 extern __device__ float d_opacityConst;
+// samples per pixel
+extern __device__ int d_samplesPerPixel;
 
 const int lenStopsPythonLike = 5;
 const int lenStopsGrayscale = 2;

@@ -17,6 +17,7 @@ public:
   bool paused;
   bool renderOnce;
   char* fps;
+  int samplesPerPixel;
 
   int tfComboSelected;
   int tfComboSelectedColor;

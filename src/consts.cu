@@ -55,3 +55,6 @@ __device__ float d_alphaAcumLimit;
 __device__ int d_tfComboSelected;
 __device__ int d_tfComboSelectedColor;
 __device__ float d_opacityConst;
+
+// ----------------------- Raycasting -----------------------
+__device__ int d_samplesPerPixel;

@@ -25,6 +25,7 @@ Widget::Widget(GLFWwindow* window) {
   this->fps = (char*)malloc(512*sizeof(char));
   this->paused = true;
   this->renderOnce = false;
+  this->samplesPerPixel = 1;
 
   this->opacityK = 0;
   this->sigmoidShift = 0.5f;
@@ -101,6 +102,7 @@ void Widget::tick(double fps) {
   }
   sprintf(this->fps, "%.3f fps\n", fps);
   ImGui::Text(this->fps);
+  ImGui::DragInt("Samples per pixel", &this->samplesPerPixel, 1, 1, 16, "%d", ImGuiSliderFlags_AlwaysClamp);
   ImGui::End();
 
   ImGui::Begin("Camera Controls");
@@ -125,6 +127,8 @@ void Widget::copyToDevice() {
   cudaMemcpyToSymbol(&d_cameraDir, &this->cameraDir, sizeof(Vec3));
   cudaMemcpyToSymbol(&d_lightPos, &this->lightPos, sizeof(Point3));
   cudaMemcpyToSymbol(&d_backgroundColor, &this->bgColor, sizeof(Color3));
+
+  cudaMemcpyToSymbol(&d_samplesPerPixel, &this->samplesPerPixel, sizeof(int));
   
   // cudaMemcpyToSymbol(&d_opacityK, &this->opacityK, sizeof(float));
   this->opacityKReal = std::pow(10.0f, (-10 + 0.1 * this->opacityK));
