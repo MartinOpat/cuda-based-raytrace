@@ -62,13 +62,15 @@ struct ColorStop {
     Color3 color;
 };
 
-// factor for the opacity function
+// factor for the gradient opacity function
 extern __device__ float d_opacityK;
 // sigmoid function variables
 extern __device__ float d_sigmoidShift;
 extern __device__ float d_sigmoidExp;
 // combo box index
 extern __device__ int d_tfComboSelected;
+// constant opacity option
+extern __device__ float d_opacityConst;
 
 const int lenStopsPythonLike = 5;
 const int lenStopsGrayscale = 2;

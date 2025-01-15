@@ -62,7 +62,7 @@ __device__ float4 transferFunction(float density, const Vec3& grad, const Point3
     break;
 
   case 2:
-    alpha = 0.1f;
+    alpha = d_opacityConst;
     break;
   
   default:

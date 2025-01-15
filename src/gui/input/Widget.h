@@ -23,6 +23,8 @@ public:
   float opacityKReal;
   float sigmoidShift;
   float sigmoidExp;
+  int opacityConst;
+  float opacityConstReal;
 
   ImGuiIO io;
 
