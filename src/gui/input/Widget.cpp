@@ -59,10 +59,8 @@ void Widget::tick(double fps) {
   // the default entry is set in the constructor, so if you want that to be a specific entry just change it
   // whatever value is selected here is available on the gpu as d_tfComboSelected.
   const char* items[] = {"Opacity - gradient", "Opacity - sigmoid", "Opacity - constant", "..."};
-  if (ImGui::BeginCombo("ComboBox for transferFunction", items[this->tfComboSelected]))
-  {
-    for (int n = 0; n < IM_ARRAYSIZE(items); n++)
-    {
+  if (ImGui::BeginCombo("ComboBox for transferFunction", items[this->tfComboSelected])) {
+    for (int n = 0; n < IM_ARRAYSIZE(items); n++) {
       const bool is_selected = (this->tfComboSelected == n);
       if (ImGui::Selectable(items[n], is_selected))
         this->tfComboSelected = n;
@@ -74,10 +72,8 @@ void Widget::tick(double fps) {
 
   // Same comments as above apply
   const char* items2[] = {"Python-like", "BPR", "Greyscale", "..."};
-  if (ImGui::BeginCombo("ComboBox for color map", items2[this->tfComboSelectedColor]))
-  {
-    for (int n = 0; n < IM_ARRAYSIZE(items2); n++)
-    {
+  if (ImGui::BeginCombo("ComboBox for color map", items2[this->tfComboSelectedColor])) {
+    for (int n = 0; n < IM_ARRAYSIZE(items2); n++) {
       const bool is_selected = (this->tfComboSelectedColor == n);
       if (ImGui::Selectable(items2[n], is_selected))
         this->tfComboSelectedColor = n;
