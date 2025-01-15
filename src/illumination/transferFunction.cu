@@ -106,7 +106,7 @@ __device__ float4 transferFunction(float density, const Vec3& grad, const Point3
 
   // --------------------------- Silhouettes ---------------------------
   Vec3 N = grad.normalize();
-  if (grad.length() > 0.2f && fabs(N.dot(viewDir)) < 0.02f) {
+  if (d_showSilhouettes && grad.length() > 0.2f && fabs(N.dot(viewDir)) < d_silhouettesThreshold) {
     result.x = 0.0f;
     result.y = 0.0f;
     result.z = 0.0f;

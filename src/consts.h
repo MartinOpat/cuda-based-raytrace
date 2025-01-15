@@ -73,6 +73,9 @@ extern __device__ int d_tfComboSelectedColor;
 extern __device__ float d_opacityConst;
 // samples per pixel
 extern __device__ int d_samplesPerPixel;
+// Silhouettes
+extern __device__ bool d_showSilhouettes;
+extern __device__ float d_silhouettesThreshold;
 
 const int lenStopsPythonLike = 5;
 const int lenStopsGrayscale = 2;

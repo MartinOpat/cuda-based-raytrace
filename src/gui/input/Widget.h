@@ -28,6 +28,8 @@ public:
   float alphaAcumLimit;
   int opacityConst;
   float opacityConstReal;
+  bool showSilhouettes;
+  float silhouettesThreshold;
 
   ImGuiIO io;
 

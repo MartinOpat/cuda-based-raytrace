@@ -33,6 +33,8 @@ Widget::Widget(GLFWwindow* window) {
   this->alphaAcumLimit = 0.4f;
   this->tfComboSelected = 0;
   this->opacityConst = 100;
+  this->showSilhouettes = true;
+  this->silhouettesThreshold = 0.02f;
 };
 
 // REFACTOR: should probably not have all the logic in one function; something like a list of ImplementedWidgets with each a Render() function (a la interface) would be better.
@@ -85,6 +87,9 @@ void Widget::tick(double fps) {
     }
     ImGui::EndCombo();
   }
+
+  if (ImGui::Button(this->showSilhouettes ? "Hide Silhouettes" : "Show Silhouettes")) this->showSilhouettes = !this->showSilhouettes;
+  ImGui::DragFloat("Silhouettes threshold", &this->silhouettesThreshold, 0.001f, 0.0f, 0.5f, "%.3f");
   ImGui::End();
 
   ImGui::Begin("Light Controls");
@@ -138,6 +143,8 @@ void Widget::copyToDevice() {
   cudaMemcpyToSymbol(&d_sigmoidExp, &this->sigmoidExp, sizeof(float));
   cudaMemcpyToSymbol(&d_alphaAcumLimit, &this->alphaAcumLimit, sizeof(float));
   cudaMemcpyToSymbol(&d_tfComboSelected, &this->tfComboSelected, sizeof(int));
+  cudaMemcpyToSymbol(&d_showSilhouettes, &this->showSilhouettes, sizeof(bool));
+  cudaMemcpyToSymbol(&d_silhouettesThreshold, &this->silhouettesThreshold, sizeof(float));
 
   this->opacityConstReal = std::pow(10.0f, (-5 + 0.05 * this->opacityConst));
   cudaMemcpyToSymbol(&d_opacityConst, &this->opacityConstReal, sizeof(float));
