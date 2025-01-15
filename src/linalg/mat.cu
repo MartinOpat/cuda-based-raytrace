@@ -72,14 +72,6 @@ __device__ Vec3 computeGradient(float* volumeData, const int volW, const int vol
     float dfdz = (sampleVolumeTrilinear(volumeData, volW, volH, volD, fx, fy, fz + hz) -
                   sampleVolumeTrilinear(volumeData, volW, volH, volD, fx, fy, fz - hz)) / (2.0f * hz);
 
-    // // DEBUG (TODO: Delete) - Back to nearest
-    // float dfdx = (sampleVolumeNearest(volumeData, volW, volH, volD, (int)roundf(fx + 1), (int)roundf(fy), (int)roundf(fz)) -
-    //               sampleVolumeNearest(volumeData, volW, volH, volD, (int)roundf(fx - 1), (int)roundf(fy), (int)roundf(fz))) / (2.0f * hx);
-    // float dfdy = (sampleVolumeNearest(volumeData, volW, volH, volD, (int)roundf(fx), (int)roundf(fy + 1), (int)roundf(fz)) -
-    //               sampleVolumeNearest(volumeData, volW, volH, volD, (int)roundf(fx), (int)roundf(fy - 1), (int)roundf(fz))) / (2.0f * hy);
-    // float dfdz = (sampleVolumeNearest(volumeData, volW, volH, volD, (int)roundf(fx), (int)roundf(fy), (int)roundf(fz + 1))  -
-    //               sampleVolumeNearest(volumeData, volW, volH, volD, (int)roundf(fx), (int)roundf(fy), (int)roundf(fz - 1))) / (2.0f * hz);
-
     return Vec3::init(dfdx, dfdy, dfdz);
 };
 
