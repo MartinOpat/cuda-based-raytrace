@@ -65,8 +65,8 @@ struct ColorStop {
 // factor for the opacity function
 extern __device__ float d_opacityK;
 // sigmoid function variables
-extern __device__ float d_sigmoidOne;
-extern __device__ float d_sigmoidTwo;
+extern __device__ float d_sigmoidShift;
+extern __device__ float d_sigmoidExp;
 // combo box index
 extern __device__ int d_tfComboSelected;
 

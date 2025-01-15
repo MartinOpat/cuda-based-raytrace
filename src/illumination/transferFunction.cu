@@ -7,12 +7,12 @@
 
 __device__ float opacityFromGradient(const Vec3 &grad) {
     float gradMag = grad.length();
-    float alpha = 1.0f - expf(-d_opacityK * gradMag);  // TODO: This parameter probably has the wrong scale
+    float alpha = 1.0f - expf(-1 * gradMag);  // TODO: This parameter probably has the wrong scale
     return alpha;
 }
 
 __device__ float opacitySigmoid(float val) {
-    return 1.0f / (1.0f + expf(d_sigmoidTwo * (val - d_sigmoidOne)));
+    return 1.0f / (1.0f + expf(d_sigmoidExp * (val - d_sigmoidShift)));
 }
 
 __device__ Color3 colorMap(float normalizedValues, const ColorStop stops[], int N) {

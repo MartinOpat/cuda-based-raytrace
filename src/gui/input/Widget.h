@@ -21,8 +21,8 @@ public:
   int tfComboSelected;
   int opacityK;
   float opacityKReal;
-  float sigmoidOne;
-  float sigmoidTwo;
+  float sigmoidShift;
+  float sigmoidExp;
 
   ImGuiIO io;
 

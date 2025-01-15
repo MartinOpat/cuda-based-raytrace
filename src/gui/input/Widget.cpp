@@ -27,8 +27,8 @@ Widget::Widget(GLFWwindow* window) {
   this->renderOnce = false;
 
   this->opacityK = 0;
-  this->sigmoidOne = 0.5f;
-  this->sigmoidTwo = -250.0f;
+  this->sigmoidShift = 0.5f;
+  this->sigmoidExp = -250.0f;
   this->tfComboSelected = 0;
 };
 
@@ -50,8 +50,8 @@ void Widget::tick(double fps) {
 
   ImGui::Begin("Transfer Function Controls");
   ImGui::DragInt("k (log [1e-10, 1])", &this->opacityK, 1, 0, 100, "%d%%", ImGuiSliderFlags_AlwaysClamp);
-  ImGui::DragFloat("sigmoidOne", &this->sigmoidOne, 0.01f, 0.0f, 1.0f, "%.2f");
-  ImGui::InputFloat("sigmoidTwo", &this->sigmoidTwo, 10.0f, 100.0f, "%.0f");
+  ImGui::DragFloat("sigmoidShift", &this->sigmoidShift, 0.01f, 0.0f, 1.0f, "%.2f");
+  ImGui::InputFloat("sigmoidExp", &this->sigmoidExp, 10.0f, 100.0f, "%.0f");
   
   // the items[] contains the entries for the combobox. The selected index is stored as an int on this->tfComboSelected
   // the default entry is set in the constructor, so if you want that to be a specific entry just change it
@@ -115,8 +115,8 @@ void Widget::copyToDevice() {
   this->opacityKReal = std::pow(10.0f, (-10 + 0.1 * this->opacityK));
   cudaMemcpyToSymbol(&d_opacityK, &this->opacityKReal, sizeof(float));
 
-  cudaMemcpyToSymbol(&d_sigmoidOne, &this->sigmoidOne, sizeof(float));
-  cudaMemcpyToSymbol(&d_sigmoidTwo, &this->sigmoidTwo, sizeof(float));
+  cudaMemcpyToSymbol(&d_sigmoidShift, &this->sigmoidShift, sizeof(float));
+  cudaMemcpyToSymbol(&d_sigmoidExp, &this->sigmoidExp, sizeof(float));
   cudaMemcpyToSymbol(&d_tfComboSelected, &this->tfComboSelected, sizeof(float));
 }
 
