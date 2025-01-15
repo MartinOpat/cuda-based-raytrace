@@ -4,41 +4,6 @@
 #include <stdio.h>
 
 
-// tri-linear interpolation - ready if necessary (but no visible improvement for full volume)
-__device__ float sampleVolumeTrilinear(float* volumeData, const int volW, const int volH, const int volD, float fx, float fy, float fz) {
-    int ix = (int)floorf(fx);
-    int iy = (int)floorf(fy);
-    int iz = (int)floorf(fz);
-
-    // Clamp indices to valid range
-    int ix1 = min(ix + 1, volH - 1);
-    int iy1 = min(iy + 1, volW - 1);
-    int iz1 = min(iz + 1, volD - 1);
-    ix = max(ix, 0);
-    iy = max(iy, 0);
-    iz = max(iz, 0);
-
-    // Compute weights
-    float dx = fx - ix;
-    float dy = fy - iy;
-    float dz = fz - iz;
-
-    // Sample values
-    float c00 = sampleVolumeNearest(volumeData, volW, volH, volD, ix, iy, iz) * (1.0f - dx) +
-                sampleVolumeNearest(volumeData, volW, volH, volD, ix1, iy, iz) * dx;
-    float c10 = sampleVolumeNearest(volumeData, volW, volH, volD, ix, iy1, iz) * (1.0f - dx) +
-                sampleVolumeNearest(volumeData, volW, volH, volD, ix1, iy1, iz) * dx;
-    float c01 = sampleVolumeNearest(volumeData, volW, volH, volD, ix, iy, iz1) * (1.0f - dx) +
-                sampleVolumeNearest(volumeData, volW, volH, volD, ix1, iy, iz1) * dx;
-    float c11 = sampleVolumeNearest(volumeData, volW, volH, volD, ix, iy1, iz1) * (1.0f - dx) +
-                sampleVolumeNearest(volumeData, volW, volH, volD, ix1, iy1, iz1) * dx;
-
-    float c0 = c00 * (1.0f - dy) + c10 * dy;
-    float c1 = c01 * (1.0f - dy) + c11 * dy;
-
-    return c0 * (1.0f - dz) + c1 * dz;
-}
-
 
 __device__ float opacityFromGradient(const Vec3 &grad) {
     float gradMag = grad.length();
@@ -98,7 +63,7 @@ __device__ float4 transferFunction(float density, const Vec3& grad, const Point3
   Vec3 normal = -grad.normalize();
   Vec3 lightDir = (d_lightPos - pos).normalize();
   Vec3 viewDir  = -rayDir.normalize();
-  Vec3 shadedColor = phongShading(normal, lightDir, viewDir, baseColor);
+  Vec3 shadedColor = phongShading(normal, lightDir, viewDir, baseColor);  // TODO: Fix pixelated
 
   // Compose
   float4 result;
@@ -108,15 +73,13 @@ __device__ float4 transferFunction(float density, const Vec3& grad, const Point3
   result.w = alpha;
 
   // --------------------------- Silhouettes ---------------------------
-  // TODO: This is the black silhouette, technically if we are doing alpha based on gradient then it's kind of redundant (?) ... but could also be used for even more pronounced edges
-  // TODO: Add a way to adjust the treshold (0.2f atm)
-  // TODO: I don't think we should literally be doing this => use gradient based opacity => delete the below if-statement
-  // if (fabs(grad.normalize().dot(rayDir.normalize())) < 0.2f) {
-  //   result.x = 0.0f;
-  //   result.y = 0.0f;
-  //   result.z = 0.0f;
-  //   result.w = 1.0f;
-  // }
+  Vec3 N = grad.normalize();
+  if (grad.length() > 0.2f && fabs(N.dot(viewDir)) < 0.02f) {
+    result.x = 0.0f;
+    result.y = 0.0f;
+    result.z = 0.0f;
+    result.w = 1.0f;
+  }
 
   return result;
 }

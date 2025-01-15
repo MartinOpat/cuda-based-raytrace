@@ -98,7 +98,7 @@ __global__ void raycastKernel(float* volumeData, FrameBuffer framebuffer, const 
 
               // If density ~ 0, skip shading
               if (density > minAllowedDensity) {
-                Vec3 grad = computeGradient(volumeData, VOLUME_WIDTH, VOLUME_HEIGHT, VOLUME_DEPTH, ix, iy, iz);
+                Vec3 grad = computeGradient(volumeData, VOLUME_WIDTH, VOLUME_HEIGHT, VOLUME_DEPTH, pos.x, pos.y, pos.z);
                 float4 color = transferFunction(density, grad, pos, rayDir);  // This already returns the alpha-weighted color
 
                 //Accumulate color, and alpha
