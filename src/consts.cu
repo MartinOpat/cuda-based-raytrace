@@ -51,6 +51,7 @@ void copyConstantsToDevice() {
 __device__ float d_opacityK;
 __device__ float d_sigmoidShift;
 __device__ float d_sigmoidExp;
+__device__ float d_alphaAcumLimit;
 __device__ int d_tfComboSelected;
 __device__ int d_tfComboSelectedColor;
 __device__ float d_opacityConst;

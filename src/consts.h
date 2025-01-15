@@ -32,7 +32,7 @@ const float MAX_SPEED = 14.0f;
 // --------------------------- Raycasting Constants ---------------------------
 const int SAMPLES_PER_PIXEL = 4;
 
-const float alphaAcumLimit = 0.4f;   // TODO: Atm, this only works with sigmoid
+// const float alphaAcumLimit = 0.4f;   // TODO: Atm, this only works with sigmoid
 const float minAllowedDensity = 0.001f;
 
 const float stepSize = 0.02f;
@@ -67,6 +67,8 @@ extern __device__ float d_opacityK;
 // sigmoid function variables
 extern __device__ float d_sigmoidShift;
 extern __device__ float d_sigmoidExp;
+// alpha accumulation limit
+extern __device__ float d_alphaAcumLimit;
 // combo box index
 extern __device__ int d_tfComboSelected;
 extern __device__ int d_tfComboSelectedColor;

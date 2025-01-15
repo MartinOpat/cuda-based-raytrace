@@ -24,6 +24,7 @@ public:
   float opacityKReal;
   float sigmoidShift;
   float sigmoidExp;
+  float alphaAcumLimit;
   int opacityConst;
   float opacityConstReal;
 

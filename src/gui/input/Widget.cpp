@@ -29,6 +29,7 @@ Widget::Widget(GLFWwindow* window) {
   this->opacityK = 0;
   this->sigmoidShift = 0.5f;
   this->sigmoidExp = -250.0f;
+  this->alphaAcumLimit = 0.4f;
   this->tfComboSelected = 0;
   this->opacityConst = 100;
 };
@@ -53,6 +54,7 @@ void Widget::tick(double fps) {
   ImGui::DragInt("Gradient exp. (log [1e-10, 1])", &this->opacityK, 1, 0, 100, "%d%%", ImGuiSliderFlags_AlwaysClamp);
   ImGui::DragFloat("sigmoidShift", &this->sigmoidShift, 0.01f, 0.0f, 1.0f, "%.2f");
   ImGui::InputFloat("sigmoidExp", &this->sigmoidExp, 10.0f, 100.0f, "%.0f");
+  ImGui::DragFloat("Alpha accumulation limit", &this->alphaAcumLimit, 0.01f, 0.0f, 1.0f, "%.2f");
   ImGui::DragInt("Opacity constant (log [1e-5, 1])", &this->opacityConst, 1, 0, 100, "%d%%", ImGuiSliderFlags_AlwaysClamp);
   
   // the items[] contains the entries for the combobox. The selected index is stored as an int on this->tfComboSelected
@@ -130,6 +132,7 @@ void Widget::copyToDevice() {
 
   cudaMemcpyToSymbol(&d_sigmoidShift, &this->sigmoidShift, sizeof(float));
   cudaMemcpyToSymbol(&d_sigmoidExp, &this->sigmoidExp, sizeof(float));
+  cudaMemcpyToSymbol(&d_alphaAcumLimit, &this->alphaAcumLimit, sizeof(float));
   cudaMemcpyToSymbol(&d_tfComboSelected, &this->tfComboSelected, sizeof(int));
 
   this->opacityConstReal = std::pow(10.0f, (-5 + 0.05 * this->opacityConst));

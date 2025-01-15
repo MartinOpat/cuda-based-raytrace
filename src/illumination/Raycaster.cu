@@ -84,7 +84,7 @@ __global__ void raycastKernel(float* volumeData, FrameBuffer framebuffer, const 
           float alphaAccum = 0.0f;
 
           float t = tNear;  // Front to back
-          while (t < tFar && alphaAccum < alphaAcumLimit) {
+          while (t < tFar && alphaAccum < d_alphaAcumLimit) {
               Point3 pos = d_cameraPos + rayDir * t;
 
               // Convert to volume indices
