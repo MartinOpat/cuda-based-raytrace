@@ -1,0 +1,2 @@
+# Notes to self (probably consider for report TODO: Delete this later probably)
+- Temp. "zero" is at celsius 0, but the interval of values of temps. is not symmetric so technically the color distrubution is skewed -> Maybe discuss this in the report.

@@ -17,11 +17,19 @@ public:
   bool paused;
   bool renderOnce;
   char* fps;
+  int samplesPerPixel;
 
+  int tfComboSelected;
+  int tfComboSelectedColor;
   int opacityK;
   float opacityKReal;
-  float sigmoidOne;
-  float sigmoidTwo;
+  float sigmoidShift;
+  float sigmoidExp;
+  float alphaAcumLimit;
+  int opacityConst;
+  float opacityConstReal;
+  bool showSilhouettes;
+  float silhouettesThreshold;
 
   ImGuiIO io;
 

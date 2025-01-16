@@ -4,7 +4,10 @@
 #include "vec.h"
 #include "consts.h"
 
-__device__ Vec3 computeGradient(float* volumeData, const int volW, const int volH, const int volD, int x, int y, int z);
+__device__ float sampleVolumeNearest(float* volumeData, const int volW, const int volH, const int volD, int vx, int vy, int vz);
+__device__ float sampleVolumeTrilinear(float* volumeData, const int volW, const int volH, const int volD, float fx, float fy, float fz);
+
+__device__ Vec3 computeGradient(float* volumeData, const int volW, const int volH, const int volD, float fx, float fy, float fz);
 
 __device__ unsigned int packUnorm4x8(float r, float g, float b, float a);
 
