@@ -8,16 +8,6 @@
 #include "input/Widget.h"
 
 
-// TODO: Delete
-void saveImage2(const char* filename, unsigned char* framebuffer, int width, int height) {  // TODO: Figure out a better way to do this
-    std::ofstream imageFile(filename, std::ios::out | std::ios::binary);
-    imageFile << "P6\n" << width << " " << height << "\n255\n";
-    for (int i = 0; i < width * height * 3; i++) {
-        imageFile << framebuffer[i];
-    }
-    imageFile.close();
-}
-
 Window::Window(unsigned int w, unsigned int h) {
   this->w = w;
   this->h = h;
@@ -65,18 +55,10 @@ int Window::init(float* data) {
   // init imGUI
   this->widget = new Widget(this->window);
 
-
+  // loop function for draw calls etc.
   while (!glfwWindowShouldClose(window)) {
     Window::tick();
   }
-  // TODO: Remove this, this was just for ray-casting debug
-  // Window::tick();
-  // Window::tick();
-  // // Save the image
-  // unsigned char* pixels = new unsigned char[this->w * this->h * 3];
-  // glReadPixels(0, 0, this->w, this->h, GL_RGB, GL_UNSIGNED_BYTE, pixels);
-  // saveImage2("output.ppm", pixels, this->w, this->h);
-  // delete[] pixels;
 
   Window::free(data);
   return 0;
@@ -116,6 +98,10 @@ void Window::tick() {
 
   // input
   this->widget->tick(1000.0/diff);
+  if (this->widget->dateChanged) {
+    // TODO: Load new date file here
+    this->widget->dateChanged = false;
+  }
   
   // tick render
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);

@@ -76,4 +76,5 @@ extern __constant__ ColorStop d_stopsBluePurleRed[3];
 // --------------------------- Functions for handling external constants ---------------------------
 void copyConstantsToDevice();
 
+
 #endif // CONSTS_H

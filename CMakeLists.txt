@@ -60,7 +60,7 @@ include_directories("${CUDA_INCLUDE_DIRS}")
 
 # netcdf
 find_package(netCDF REQUIRED)
-message(STATUS "Found netcdf in ${GLFW3_INCLUDE_DIR}")
+message(STATUS "Found netcdf in ${NETCDF_INCLUDE_DIR}")
 
 execute_process(
     COMMAND nc-config --includedir
