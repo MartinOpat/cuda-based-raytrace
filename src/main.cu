@@ -79,25 +79,25 @@ int main() {
     }
   }
 
-  // Store the half-way up slice data into a file TODO: Remove this debug
-  std::ofstream myfile;
-  myfile.open("halfwayup.txt");
-  for (int i = 0; i < VOLUME_WIDTH; i++) {
-    for (int j = 0; j < VOLUME_HEIGHT; j++) {
-      myfile << hostVolume[i + j*VOLUME_WIDTH + VOLUME_DEPTH/2*VOLUME_WIDTH*VOLUME_HEIGHT] << " ";
-    }
-    myfile << std::endl;
-  }
-  myfile.close();
+  // // Store the half-way up slice data into a file TODO: Remove this debug
+  // std::ofstream myfile;
+  // myfile.open("halfwayup.txt");
+  // for (int i = 0; i < VOLUME_WIDTH; i++) {
+  //   for (int j = 0; j < VOLUME_HEIGHT; j++) {
+  //     myfile << hostVolume[i + j*VOLUME_WIDTH + VOLUME_DEPTH/2*VOLUME_WIDTH*VOLUME_HEIGHT] << " ";
+  //   }
+  //   myfile << std::endl;
+  // }
+  // myfile.close();
 
-  // Print min, max, avg., and median values TODO: Remove this debug
-  float minVal = *std::min_element(hostVolume, hostVolume + VOLUME_WIDTH * VOLUME_HEIGHT * VOLUME_DEPTH, [](float a, float b) {
-    if (a <= epsilon) return false;
-    if (b <= epsilon) return true;
-    return a < b;
-  });
-  float maxVal = *std::max_element(hostVolume, hostVolume + VOLUME_WIDTH * VOLUME_HEIGHT * VOLUME_DEPTH);
-  std::cout << "minVal: " << minVal << " maxVal: " << maxVal << std::endl;
+  // // Print min, max, avg., and median values TODO: Remove this debug
+  // float minVal = *std::min_element(hostVolume, hostVolume + VOLUME_WIDTH * VOLUME_HEIGHT * VOLUME_DEPTH, [](float a, float b) {
+  //   if (a <= epsilon) return false;
+  //   if (b <= epsilon) return true;
+  //   return a < b;
+  // });
+  // float maxVal = *std::max_element(hostVolume, hostVolume + VOLUME_WIDTH * VOLUME_HEIGHT * VOLUME_DEPTH);
+  // std::cout << "minVal: " << minVal << " maxVal: " << maxVal << std::endl;
   // // print min, max, avg., and median values <--- the code actually does not work when this snippet is enabled so probably TODO: Delete this later
   // std::sort(hostVolume, hostVolume + VOLUME_WIDTH * VOLUME_HEIGHT * VOLUME_DEPTH);
   // float sum = std::accumulate(hostVolume, hostVolume + VOLUME_WIDTH * VOLUME_HEIGHT * VOLUME_DEPTH, 0.0f);

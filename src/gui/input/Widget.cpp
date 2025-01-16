@@ -51,14 +51,19 @@ void parseDate(char* string, int dayOfYear) {
 
 Widget::Widget(GLFWwindow* window) : 
   opacityK(0),
-  sigmoidOne(0.5f),
-  sigmoidTwo(-250.0f),
+  sigmoidShift(0.5f),
+  sigmoidExp(-250.0f),
   tfComboSelected(0),
   dateChanged(false),
   paused(true),
   renderOnce(false),
   bgColor(Color3::init(0.1f, 0.1f, 0.1f)),
-  date(0) 
+  date(0),
+  samplesPerPixel(1),
+  alphaAcumLimit(0.4f),
+  opacityConst(100),
+  showSilhouettes(true),
+  silhouettesThreshold(0.2f)
 {
   IMGUI_CHECKVERSION();
   ImGui::CreateContext();
@@ -90,18 +95,18 @@ void Widget::tick(double fps) {
   
 
   ImGui::Begin("Transfer Function Controls");
-  ImGui::DragInt("k (log [1e-10, 1])", &this->opacityK, 1, 0, 100, "%d%%", ImGuiSliderFlags_AlwaysClamp);
-  ImGui::DragFloat("sigmoidOne", &this->sigmoidOne, 0.01f, 0.0f, 1.0f, "%.2f");
-  ImGui::InputFloat("sigmoidTwo", &this->sigmoidTwo, 10.0f, 100.0f, "%.0f");
+  ImGui::DragInt("Grad. exp. (log [1e-10, 1])", &this->opacityK, 1, 0, 100, "%d%%", ImGuiSliderFlags_AlwaysClamp);
+  ImGui::DragFloat("Sig. shift", &this->sigmoidShift, 0.01f, 0.0f, 1.0f, "%.2f");
+  ImGui::InputFloat("Sig. sxp", &this->sigmoidExp, 10.0f, 100.0f, "%.0f");
+  ImGui::DragFloat("Alpha accum. limit", &this->alphaAcumLimit, 0.01f, 0.0f, 1.0f, "%.2f");
+  ImGui::DragInt("Opacity const. (log [1e-5, 1])", &this->opacityConst, 1, 0, 100, "%d%%", ImGuiSliderFlags_AlwaysClamp);
   
   // the items[] contains the entries for the combobox. The selected index is stored as an int on this->tfComboSelected
   // the default entry is set in the constructor, so if you want that to be a specific entry just change it
   // whatever value is selected here is available on the gpu as d_tfComboSelected.
-  const char* items[] = {"First option", "Another option", "this is the third option", "..."};
-  if (ImGui::BeginCombo("ComboBox for transferFunction", items[this->tfComboSelected]))
-  {
-    for (int n = 0; n < IM_ARRAYSIZE(items); n++)
-    {
+  const char* items[] = {"Opacity - gradient", "Opacity - sigmoid", "Opacity - constant", "..."};
+  if (ImGui::BeginCombo("Transfer function", items[this->tfComboSelected])) {
+    for (int n = 0; n < IM_ARRAYSIZE(items); n++) {
       const bool is_selected = (this->tfComboSelected == n);
       if (ImGui::Selectable(items[n], is_selected))
         this->tfComboSelected = n;
@@ -110,6 +115,22 @@ void Widget::tick(double fps) {
     }
     ImGui::EndCombo();
   }
+
+  // Same comments as above apply
+  const char* items2[] = {"Python-like", "BPR", "Greyscale", "..."};
+  if (ImGui::BeginCombo("Color map", items2[this->tfComboSelectedColor])) {
+    for (int n = 0; n < IM_ARRAYSIZE(items2); n++) {
+      const bool is_selected = (this->tfComboSelectedColor == n);
+      if (ImGui::Selectable(items2[n], is_selected))
+        this->tfComboSelectedColor = n;
+      if (is_selected)
+        ImGui::SetItemDefaultFocus();
+    }
+    ImGui::EndCombo();
+  }
+
+  if (ImGui::Button(this->showSilhouettes ? "Hide Silhouettes" : "Show Silhouettes")) this->showSilhouettes = !this->showSilhouettes;
+  ImGui::DragFloat("Silhouettes threshold", &this->silhouettesThreshold, 0.001f, 0.0f, 0.5f, "%.3f");
   ImGui::End();
 
 
@@ -140,6 +161,7 @@ void Widget::tick(double fps) {
   }
   ImGui::SameLine();
   ImGui::Text(this->dateString);
+  ImGui::DragInt("Samples per pixel", &this->samplesPerPixel, 1, 1, 16, "%d", ImGuiSliderFlags_AlwaysClamp);
   ImGui::End();
 
 
@@ -179,14 +201,24 @@ void Widget::copyToDevice() {
   cudaMemcpyToSymbol(&d_cameraDir, &this->cameraDir, sizeof(Vec3));
   cudaMemcpyToSymbol(&d_lightPos, &this->lightPos, sizeof(Point3));
   cudaMemcpyToSymbol(&d_backgroundColor, &this->bgColor, sizeof(Color3));
+
+  cudaMemcpyToSymbol(&d_samplesPerPixel, &this->samplesPerPixel, sizeof(int));
   
   // cudaMemcpyToSymbol(&d_opacityK, &this->opacityK, sizeof(float));
   this->opacityKReal = std::pow(10.0f, (-10 + 0.1 * this->opacityK));
   cudaMemcpyToSymbol(&d_opacityK, &this->opacityKReal, sizeof(float));
 
-  cudaMemcpyToSymbol(&d_sigmoidOne, &this->sigmoidOne, sizeof(float));
-  cudaMemcpyToSymbol(&d_sigmoidTwo, &this->sigmoidTwo, sizeof(float));
-  cudaMemcpyToSymbol(&d_tfComboSelected, &this->tfComboSelected, sizeof(float));
+  cudaMemcpyToSymbol(&d_sigmoidShift, &this->sigmoidShift, sizeof(float));
+  cudaMemcpyToSymbol(&d_sigmoidExp, &this->sigmoidExp, sizeof(float));
+  cudaMemcpyToSymbol(&d_alphaAcumLimit, &this->alphaAcumLimit, sizeof(float));
+  cudaMemcpyToSymbol(&d_tfComboSelected, &this->tfComboSelected, sizeof(int));
+  cudaMemcpyToSymbol(&d_showSilhouettes, &this->showSilhouettes, sizeof(bool));
+  cudaMemcpyToSymbol(&d_silhouettesThreshold, &this->silhouettesThreshold, sizeof(float));
+
+  this->opacityConstReal = std::pow(10.0f, (-5 + 0.05 * this->opacityConst));
+  cudaMemcpyToSymbol(&d_opacityConst, &this->opacityConstReal, sizeof(float));
+
+  cudaMemcpyToSymbol(&d_tfComboSelectedColor, &this->tfComboSelectedColor, sizeof(int));
 }
 
 Widget::~Widget() {

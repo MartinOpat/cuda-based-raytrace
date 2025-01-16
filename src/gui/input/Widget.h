@@ -30,13 +30,20 @@ private:
   char* fps;
   ImGuiIO io;
   char *dateString;
+  int samplesPerPixel;
 
   // transfer function controls
   int tfComboSelected;
+  int tfComboSelectedColor;
   int opacityK;
   float opacityKReal;
-  float sigmoidOne;
-  float sigmoidTwo;
+  float sigmoidShift;
+  float sigmoidExp;
+  float alphaAcumLimit;
+  int opacityConst;
+  float opacityConstReal;
+  bool showSilhouettes;
+  float silhouettesThreshold;
 
   // miscellaneous
   Point3 lightPos;
