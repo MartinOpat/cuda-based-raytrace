@@ -13,11 +13,15 @@ Widget::Widget(GLFWwindow* window) {
   ImGui_ImplGlfw_InitForOpenGL(window, true);
   ImGui_ImplOpenGL3_Init();
 
-  this->cameraPos = Point3::init(50.0f, -50.0f, -75.0f);  // Camera for partially trimmed data set
+  this->cameraPos = Point3::init(64.0f, 42.5f, 250.0f);  // Camera for partially trimmed data set
   // this->cameraPos = Point3::init(300.0f, 200.0f, -700.0f);  // Camera for full data set
+  this->cameraDir = Point3::init(0.074f, -0.301f, -2.810f);
   
-  Vec3 h_center = Vec3::init((float)VOLUME_WIDTH/2.0f, (float)VOLUME_HEIGHT/2.0f, (float)VOLUME_DEPTH/2.0f);
-  this->cameraDir = (h_center - this->cameraPos).normalize();
+  // Vec3 h_center = Vec3::init((float)VOLUME_WIDTH/2.0f, (float)VOLUME_HEIGHT/2.0f, (float)VOLUME_DEPTH/2.0f);
+  // this->cameraDir = (h_center - this->cameraPos).normalize();
+
+  // Vec3 h_center = Vec3::init((float)VOLUME_WIDTH, (float)VOLUME_HEIGHT, (float)VOLUME_DEPTH);
+  // this->cameraDir = (h_center - this->cameraPos).normalize();
 
   this->bgColor = Color3::init(0.1f, 0.1f, 0.1f);
   this->lightPos = Point3::init(1.5, 2.0, -1.0);
@@ -25,14 +29,23 @@ Widget::Widget(GLFWwindow* window) {
   this->fps = (char*)malloc(512*sizeof(char));
   this->paused = true;
   this->renderOnce = false;
+  this->samplesPerPixel = 1;
 
   this->opacityK = 0;
-  this->sigmoidOne = 0.5f;
-  this->sigmoidTwo = -250.0f;
+  this->sigmoidShift = 0.5f;
+  this->sigmoidExp = -250.0f;
+  this->alphaAcumLimit = 0.4f;
+  this->tfComboSelected = 2;
+  this->opacityConst = 100;
+  this->showSilhouettes = false;
+  this->silhouettesThreshold = 0.02f;
 };
 
-// TODO: can be marginally improvement by only copying changed values to device - however we're dealing with individual floats here so i dont think the benefit would be all that obvious.
+// REFACTOR: should probably not have all the logic in one function; something like a list of ImplementedWidgets with each a Render() function (a la interface) would be better.
+// TODO: can be marginally improved by only copying changed values to device - however we're dealing with individual floats here so i dont think the benefit would be all that obvious.
+// TODO: wrap basically all ImGui calls in if statements; better form + allows for checking return values / errors.
 void Widget::tick(double fps) {
+
   if (this->renderOnce) {
     this->renderOnce = false;
     this->paused = true;
@@ -46,9 +59,42 @@ void Widget::tick(double fps) {
   float min = -1, max = 1;
 
   ImGui::Begin("Transfer Function Controls");
-  ImGui::DragInt("k (log [1e-10, 1])", &this->opacityK, 1, 0, 100, "%d%%", ImGuiSliderFlags_AlwaysClamp);
-  ImGui::DragFloat("sigmoidOne", &this->sigmoidOne, 0.01f, 0.0f, 1.0f, "%.2f");
-  ImGui::InputFloat("sigmoidTwo", &this->sigmoidTwo, 10.0f, 100.0f, "%.0f");
+  ImGui::DragInt("Grad. exp. (log [1e-10, 1])", &this->opacityK, 1, 0, 100, "%d%%", ImGuiSliderFlags_AlwaysClamp);
+  ImGui::DragFloat("Sig. shift", &this->sigmoidShift, 0.01f, 0.0f, 1.0f, "%.2f");
+  ImGui::InputFloat("Sig. sxp", &this->sigmoidExp, 10.0f, 100.0f, "%.0f");
+  ImGui::DragFloat("Alpha accum. limit", &this->alphaAcumLimit, 0.01f, 0.0f, 1.0f, "%.2f");
+  ImGui::DragInt("Opacity const. (log [1e-5, 1])", &this->opacityConst, 1, 0, 100, "%d%%", ImGuiSliderFlags_AlwaysClamp);
+  
+  // the items[] contains the entries for the combobox. The selected index is stored as an int on this->tfComboSelected
+  // the default entry is set in the constructor, so if you want that to be a specific entry just change it
+  // whatever value is selected here is available on the gpu as d_tfComboSelected.
+  const char* items[] = {"Opacity - gradient", "Opacity - sigmoid", "Opacity - constant", "..."};
+  if (ImGui::BeginCombo("Transfer function", items[this->tfComboSelected])) {
+    for (int n = 0; n < IM_ARRAYSIZE(items); n++) {
+      const bool is_selected = (this->tfComboSelected == n);
+      if (ImGui::Selectable(items[n], is_selected))
+        this->tfComboSelected = n;
+      if (is_selected)
+        ImGui::SetItemDefaultFocus();
+    }
+    ImGui::EndCombo();
+  }
+
+  // Same comments as above apply
+  const char* items2[] = {"Python-like", "BPR", "Greyscale", "..."};
+  if (ImGui::BeginCombo("Color map", items2[this->tfComboSelectedColor])) {
+    for (int n = 0; n < IM_ARRAYSIZE(items2); n++) {
+      const bool is_selected = (this->tfComboSelectedColor == n);
+      if (ImGui::Selectable(items2[n], is_selected))
+        this->tfComboSelectedColor = n;
+      if (is_selected)
+        ImGui::SetItemDefaultFocus();
+    }
+    ImGui::EndCombo();
+  }
+
+  if (ImGui::Button(this->showSilhouettes ? "Hide Silhouettes" : "Show Silhouettes")) this->showSilhouettes = !this->showSilhouettes;
+  ImGui::DragFloat("Silhouettes threshold", &this->silhouettesThreshold, 0.001f, 0.0f, 0.5f, "%.3f");
   ImGui::End();
 
   ImGui::Begin("Light Controls");
@@ -66,6 +112,7 @@ void Widget::tick(double fps) {
   }
   sprintf(this->fps, "%.3f fps\n", fps);
   ImGui::Text("%s", this->fps);
+  ImGui::DragInt("Samples per pixel", &this->samplesPerPixel, 1, 1, 16, "%d", ImGuiSliderFlags_AlwaysClamp);
   ImGui::End();
 
   ImGui::Begin("Camera Controls");
@@ -76,7 +123,7 @@ void Widget::tick(double fps) {
   ImGui::DragScalar("Y direction", ImGuiDataType_Double, &this->cameraDir.z, 0.005f, &min, &max, "%.3f");
   ImGui::DragScalar("Z direction", ImGuiDataType_Double, &this->cameraDir.y, 0.005f, &min, &max, "%.3f");
   ImGui::End();
-  
+
   copyToDevice();
 }
 
@@ -90,13 +137,24 @@ void Widget::copyToDevice() {
   cudaMemcpyToSymbol(&d_cameraDir, &this->cameraDir, sizeof(Vec3));
   cudaMemcpyToSymbol(&d_lightPos, &this->lightPos, sizeof(Point3));
   cudaMemcpyToSymbol(&d_backgroundColor, &this->bgColor, sizeof(Color3));
+
+  cudaMemcpyToSymbol(&d_samplesPerPixel, &this->samplesPerPixel, sizeof(int));
   
   // cudaMemcpyToSymbol(&d_opacityK, &this->opacityK, sizeof(float));
   this->opacityKReal = std::pow(10.0f, (-10 + 0.1 * this->opacityK));
   cudaMemcpyToSymbol(&d_opacityK, &this->opacityKReal, sizeof(float));
 
-  cudaMemcpyToSymbol(&d_sigmoidOne, &this->sigmoidOne, sizeof(float));
-  cudaMemcpyToSymbol(&d_sigmoidTwo, &this->sigmoidTwo, sizeof(float));
+  cudaMemcpyToSymbol(&d_sigmoidShift, &this->sigmoidShift, sizeof(float));
+  cudaMemcpyToSymbol(&d_sigmoidExp, &this->sigmoidExp, sizeof(float));
+  cudaMemcpyToSymbol(&d_alphaAcumLimit, &this->alphaAcumLimit, sizeof(float));
+  cudaMemcpyToSymbol(&d_tfComboSelected, &this->tfComboSelected, sizeof(int));
+  cudaMemcpyToSymbol(&d_showSilhouettes, &this->showSilhouettes, sizeof(bool));
+  cudaMemcpyToSymbol(&d_silhouettesThreshold, &this->silhouettesThreshold, sizeof(float));
+
+  this->opacityConstReal = std::pow(10.0f, (-5 + 0.05 * this->opacityConst));
+  cudaMemcpyToSymbol(&d_opacityConst, &this->opacityConstReal, sizeof(float));
+
+  cudaMemcpyToSymbol(&d_tfComboSelectedColor, &this->tfComboSelectedColor, sizeof(int));
 }
 
 Widget::~Widget() {

@@ -4,8 +4,7 @@
 
 First, initialize the imGui submodule:
 ```bash
-git submodule init imgui
-git submodule update imgui
+git submodule update --init
 ```
 
 Then, compile using cmake:

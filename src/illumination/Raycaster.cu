@@ -20,14 +20,14 @@ __global__ void raycastKernel(float* volumeData, FrameBuffer framebuffer, const 
     float accumR = 0.0f;
     float accumG = 0.0f;
     float accumB = 0.0f;
-    float accumA = 1.0f * (float)SAMPLES_PER_PIXEL;
+    float accumA = 1.0f * (float)d_samplesPerPixel;
 
     // Initialize random state for ray scattering
     curandState randState;
     curand_init(1234, px + py * width, 0, &randState);
 
     // Multiple samples per pixel
-    for (int s = 0; s < SAMPLES_PER_PIXEL; s++) {
+    for (int s = 0; s < d_samplesPerPixel; s++) {
         // Map to [-1, 1]
         float jitterU = (curand_uniform(&randState) - 0.5f) / width;
         float jitterV = (curand_uniform(&randState) - 0.5f) / height;
@@ -71,11 +71,11 @@ __global__ void raycastKernel(float* volumeData, FrameBuffer framebuffer, const 
         intersectAxis(d_cameraPos.z, rayDir.z, 0.0f, (float)VOLUME_DEPTH);
 
         if (tNear > tFar) {
-          // No intersection -> Set to brackground color (multiply by SAMPLES_PER_PIXEL because we divide by it later)
-          accumR = d_backgroundColor.x * (float)SAMPLES_PER_PIXEL;
-          accumG = d_backgroundColor.y * (float)SAMPLES_PER_PIXEL;
-          accumB = d_backgroundColor.z * (float)SAMPLES_PER_PIXEL;
-          accumA = 1.0f * (float)SAMPLES_PER_PIXEL;
+          // No intersection -> Set to brackground color (multiply by d_samplesPerPixel because we divide by it later)
+          accumR = d_backgroundColor.x * (float)d_samplesPerPixel;
+          accumG = d_backgroundColor.y * (float)d_samplesPerPixel;
+          accumB = d_backgroundColor.z * (float)d_samplesPerPixel;
+          accumA = 1.0f * (float)d_samplesPerPixel;
           
         } else {
           if (tNear < 0.0f) tNear = 0.0f;
@@ -84,7 +84,7 @@ __global__ void raycastKernel(float* volumeData, FrameBuffer framebuffer, const 
           float alphaAccum = 0.0f;
 
           float t = tNear;  // Front to back
-          while (t < tFar && alphaAccum < alphaAcumLimit) {
+          while (t < tFar && alphaAccum < d_alphaAcumLimit) {
               Point3 pos = d_cameraPos + rayDir * t;
 
               // Convert to volume indices
@@ -92,13 +92,13 @@ __global__ void raycastKernel(float* volumeData, FrameBuffer framebuffer, const 
               int iy = (int)roundf(pos.y);
               int iz = (int)roundf(pos.z);
 
-              // Sample (pick appropriate method based on volume size) TODO: Add a way to pick this in GUI
+              // Sample (pick appropriate method based on volume size) TODO: Consider adding a way to pick this in GUI (?)
               // float density = sampleVolumeNearest(volumeData, VOLUME_WIDTH, VOLUME_HEIGHT, VOLUME_DEPTH, ix, iy, iz);
               float density = sampleVolumeTrilinear(volumeData, VOLUME_WIDTH, VOLUME_HEIGHT, VOLUME_DEPTH, pos.x, pos.y, pos.z);
 
               // If density ~ 0, skip shading
               if (density > minAllowedDensity) {
-                Vec3 grad = computeGradient(volumeData, VOLUME_WIDTH, VOLUME_HEIGHT, VOLUME_DEPTH, ix, iy, iz);
+                Vec3 grad = computeGradient(volumeData, VOLUME_WIDTH, VOLUME_HEIGHT, VOLUME_DEPTH, pos.x, pos.y, pos.z);
                 float4 color = transferFunction(density, grad, pos, rayDir);  // This already returns the alpha-weighted color
 
                 //Accumulate color, and alpha
@@ -130,10 +130,10 @@ __global__ void raycastKernel(float* volumeData, FrameBuffer framebuffer, const 
 
 
     // Average samples
-    accumR /= (float)SAMPLES_PER_PIXEL;
-    accumG /= (float)SAMPLES_PER_PIXEL;
-    accumB /= (float)SAMPLES_PER_PIXEL;
-    accumA /= (float)SAMPLES_PER_PIXEL;
+    accumR /= (float)d_samplesPerPixel;
+    accumG /= (float)d_samplesPerPixel;
+    accumB /= (float)d_samplesPerPixel;
+    accumA /= (float)d_samplesPerPixel;
 
     // Final colour
     framebuffer.writePixel(px, py, accumR, accumG, accumB, accumA);
@@ -156,7 +156,6 @@ Raycaster::Raycaster(cudaGraphicsResource_t resources, int w, int h, float* data
 
 
 void Raycaster::render() {
-  std::cout << "hello???\n";
   check_cuda_errors(cudaGetLastError());
   check_cuda_errors(cudaGraphicsMapResources(1, &this->resources));
 	check_cuda_errors(cudaGraphicsResourceGetMappedPointer((void**)&(this->fb->buffer), &(this->fb->buffer_size), resources));

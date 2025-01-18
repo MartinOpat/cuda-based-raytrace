@@ -4,7 +4,7 @@ stdenv.mkDerivation {
 	name = "cuda-raytracer";
 	src = ./.;
 	nativeBuildInputs = with cudaPackages; [cmake autoAddDriverRunpath autoPatchelfHook ];
-	buildInputs = with pkgs; with cudaPackages; [ libGL glfw netcdf netcdfcxx4 cuda_nvcc cuda_cudart cuda_cccl libcurand];
+	buildInputs = with pkgs; with cudaPackages; [ libGL glfw netcdf netcdfcxx4 cuda_nvcc cuda_cudart cuda_cccl libcurand libdecor];
 
 	postConfigure = ''
 		export netCDFCxx_DIR=${netcdfcxx4}/lib/cmake/netCDFCxx
