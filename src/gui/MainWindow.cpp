@@ -6,6 +6,7 @@
 
 #include "Shader.h"
 #include "input/Widget.h"
+#include "cuda_error.h"
 
 
 // TODO: Delete

@@ -1,9 +1,10 @@
 #include "consts.h"
+#include "cuda_error.h"
 
 // ----------------------- Colour mapping -----------------------
-__constant__ ColorStop d_stopsPythonLike[5];
-__constant__ ColorStop d_stopsGrayscale[2];
-__constant__ ColorStop d_stopsBluePurleRed[3];
+__device__ __constant__ ColorStop d_stopsPythonLike[5];
+__device__ __constant__ ColorStop d_stopsGrayscale[2];
+__device__ __constant__ ColorStop d_stopsBluePurleRed[3];
 
 const ColorStop h_stopsPythonLike[] = {
         { 0.0f, Color3::init(0.2298057f, 0.29871797f, 0.75368315f) }, // Dark Blue
@@ -37,8 +38,10 @@ Vec3 h_cameraUp = Vec3::init(0.0, 1.0, 0.0).normalize();
 
 // Copy the above values to the device
 void copyConstantsToDevice() {
+    check_cuda_errors(cudaGetLastError());
     // ----------------------- Colour mapping -----------------------
     cudaMemcpyToSymbol(d_stopsPythonLike, h_stopsPythonLike, sizeof(h_stopsPythonLike));
+    check_cuda_errors(cudaGetLastError());
     cudaMemcpyToSymbol(d_stopsGrayscale, h_stopsGrayscale, sizeof(h_stopsGrayscale));
     cudaMemcpyToSymbol(d_stopsBluePurleRed, h_stopsBluePurleRed, sizeof(h_stopsBluePurleRed));
 

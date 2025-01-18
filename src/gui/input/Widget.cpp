@@ -65,7 +65,7 @@ void Widget::tick(double fps) {
     this->renderOnce = true;
   }
   sprintf(this->fps, "%.3f fps\n", fps);
-  ImGui::Text(this->fps);
+  ImGui::Text("%s", this->fps);
   ImGui::End();
 
   ImGui::Begin("Camera Controls");

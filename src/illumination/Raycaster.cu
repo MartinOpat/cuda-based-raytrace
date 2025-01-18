@@ -156,6 +156,8 @@ Raycaster::Raycaster(cudaGraphicsResource_t resources, int w, int h, float* data
 
 
 void Raycaster::render() {
+  std::cout << "hello???\n";
+  check_cuda_errors(cudaGetLastError());
   check_cuda_errors(cudaGraphicsMapResources(1, &this->resources));
 	check_cuda_errors(cudaGraphicsResourceGetMappedPointer((void**)&(this->fb->buffer), &(this->fb->buffer_size), resources));
 

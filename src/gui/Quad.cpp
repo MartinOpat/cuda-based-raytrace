@@ -83,6 +83,7 @@ void Quad::cuda_init(float* data) {
 
 
 void Quad::render() {
+  check_cuda_errors(cudaGetLastError());
   glBindTexture(GL_TEXTURE_2D, 0);
   this->renderer->render(); 
   glBindTexture(GL_TEXTURE_2D, this->tex);
