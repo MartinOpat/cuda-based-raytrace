@@ -9,8 +9,10 @@
 
 class Widget {
 public:
-  Point3 cameraDir;
-  Vec3 cameraPos;
+  double pitch, yaw, roll;
+  Vec3 cameraUp;
+  Vec3 cameraDir;
+  Point3 cameraPos;
   Point3 lightPos;
   Color3 bgColor; // TODO: widget
 

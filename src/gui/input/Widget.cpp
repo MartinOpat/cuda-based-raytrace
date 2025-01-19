@@ -3,6 +3,7 @@
 #include "consts.h"
 #include <cstdio>
 #include <stdlib.h>
+#include <iostream>
 
 
 Widget::Widget(GLFWwindow* window) {
@@ -13,9 +14,17 @@ Widget::Widget(GLFWwindow* window) {
   ImGui_ImplGlfw_InitForOpenGL(window, true);
   ImGui_ImplOpenGL3_Init();
 
-  this->cameraPos = Point3::init(64.0f, 42.5f, 250.0f);  // Camera for partially trimmed data set
+  // this->cameraPos = Point3::init(64.0f, 42.5f, 250.0f);  // Camera for partially trimmed data set
+  this->cameraPos = Point3::init(59.0f, 77.5f, -18.0f);  // Camera for partially trimmed data set
   // this->cameraPos = Point3::init(300.0f, 200.0f, -700.0f);  // Camera for full data set
-  this->cameraDir = Point3::init(0.074f, -0.301f, -2.810f);
+  // this->pitch = -1.7;
+  // this->yaw = 1.475;
+  // this->roll = 0;
+  this->pitch = 0.7;
+  this->yaw = 4.85;
+  this->roll = -0.010;
+  this->cameraDir = Vec3::getDirectionFromEuler(pitch, yaw, roll);
+  // this->cameraDir = Point3::init(0.074f, -0.301f, -2.810f);
   
   // Vec3 h_center = Vec3::init((float)VOLUME_WIDTH/2.0f, (float)VOLUME_HEIGHT/2.0f, (float)VOLUME_DEPTH/2.0f);
   // this->cameraDir = (h_center - this->cameraPos).normalize();
@@ -119,10 +128,21 @@ void Widget::tick(double fps) {
   ImGui::DragScalar("X position", ImGuiDataType_Double, &this->cameraPos.x, 0.5f, &min, &max, "%.3f");
   ImGui::DragScalar("Y position", ImGuiDataType_Double, &this->cameraPos.z, 0.5f, &min, &max, "%.3f");
   ImGui::DragScalar("Z position", ImGuiDataType_Double, &this->cameraPos.y, 0.5f, &min, &max, "%.3f");
-  ImGui::DragScalar("X direction", ImGuiDataType_Double, &this->cameraDir.x, 0.005f, &min, &max, "%.3f");
-  ImGui::DragScalar("Y direction", ImGuiDataType_Double, &this->cameraDir.z, 0.005f, &min, &max, "%.3f");
-  ImGui::DragScalar("Z direction", ImGuiDataType_Double, &this->cameraDir.y, 0.005f, &min, &max, "%.3f");
+  // ImGui::DragScalar("X direction", ImGuiDataType_Double, &this->cameraDir.x, 0.005f, &min, &max, "%.3f");
+  // ImGui::DragScalar("Y direction", ImGuiDataType_Double, &this->cameraDir.z, 0.005f, &min, &max, "%.3f");
+  // ImGui::DragScalar("Z direction", ImGuiDataType_Double, &this->cameraDir.y, 0.005f, &min, &max, "%.3f");
+  ImGui::DragScalar("Pitch", ImGuiDataType_Double, &this->pitch, 0.005f, &min, &max, "%.3f");
+  ImGui::DragScalar("Yaw", ImGuiDataType_Double, &this->yaw, 0.005f, &min, &max, "%.3f");
+  ImGui::DragScalar("Roll", ImGuiDataType_Double, &this->roll, 0.005f, &min, &max, "%.3f");
   ImGui::End();
+
+  this->cameraDir.setDirectionFromEuler(pitch, yaw, roll);
+
+  // Calculate upCamera
+  Vec3 arbitraryVector = Vec3::init(1, 0, 0);
+  cameraUp = arbitraryVector.cross(cameraDir);
+  cameraUp.normalize();
+  cameraUp.rotateAroundAxis(cameraDir, roll);
 
   copyToDevice();
 }
@@ -134,6 +154,7 @@ void Widget::render() {
 
 void Widget::copyToDevice() {
   cudaMemcpyToSymbol(&d_cameraPos, &this->cameraPos, sizeof(Point3));
+  cudaMemcpyToSymbol(&d_cameraUp, &this->cameraUp, sizeof(Point3));
   cudaMemcpyToSymbol(&d_cameraDir, &this->cameraDir, sizeof(Vec3));
   cudaMemcpyToSymbol(&d_lightPos, &this->lightPos, sizeof(Point3));
   cudaMemcpyToSymbol(&d_backgroundColor, &this->bgColor, sizeof(Color3));

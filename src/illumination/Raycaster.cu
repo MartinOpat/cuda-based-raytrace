@@ -38,7 +38,7 @@ __global__ void raycastKernel(float* volumeData, FrameBuffer framebuffer, const 
         u *= tanHalfFov;
         v *= tanHalfFov;
 
-        // Find ray direction
+
         Vec3 cameraRight = (d_cameraDir.cross(d_cameraUp)).normalize();
         d_cameraUp = (cameraRight.cross(d_cameraDir)).normalize();
         Vec3 rayDir = (d_cameraDir + cameraRight*u + d_cameraUp*v).normalize();

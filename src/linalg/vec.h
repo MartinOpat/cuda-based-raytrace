@@ -31,6 +31,33 @@ struct Vec3 {
     __host__ __device__ Vec3 cross(const Vec3& b) const { return Vec3::init(y * b.z - z * b.y, z * b.x - x * b.z, x * b.y - y * b.x); }
     __host__ __device__ Vec3 normalize() const { double len = sqrt(x * x + y * y + z * z); return Vec3::init(x / len, y / len, z / len); }
     __host__ __device__ double length() const { return sqrt(x * x + y * y + z * z); }
+
+    __host__ __device__ void setDirectionFromEuler(double pitch, double yaw, double roll) {
+        // Compute the direction vector using the Euler angles in radians
+        double cosPitch = cos(pitch);
+        double sinPitch = sin(pitch);
+        double cosYaw = cos(yaw);
+        double sinYaw = sin(yaw);
+
+        // Direction vector components
+        x = cosPitch * cosYaw;
+        y = cosPitch * sinYaw;
+        z = sinPitch;
+    }
+
+    static __host__ __device__ Vec3 getDirectionFromEuler(double pitch, double yaw, double roll) {
+        Vec3 v = Vec3::init(1,0,0);
+        v.setDirectionFromEuler(pitch, yaw, roll);
+        return v;
+    }
+
+    __host__ __device__ void rotateAroundAxis(const Vec3& axis, double angle) {
+        double cosA = cos(angle);
+        double sinA = sin(angle);
+
+        Vec3 rotated = *this * cosA + axis.cross(*this) * sinA + axis * axis.dot(*this) * (1 - cosA);
+        *this = rotated;
+    }
 };
 
 typedef Vec3 Point3;
