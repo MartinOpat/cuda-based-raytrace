@@ -13,13 +13,15 @@ const double infty   = 1e15f;  // This value is used to represent missing values
 
 // --------------------------- Dataset Constants ---------------------------
 // const int VOLUME_WIDTH  = 576;  // lon
-const int VOLUME_WIDTH  = 97;  // lon
+// const int VOLUME_WIDTH  = 97;  // lon
+const int VOLUME_WIDTH  = 57;  // lon
 // const int VOLUME_HEIGHT = 361;  // lat
-const int VOLUME_HEIGHT = 71;  // lat
+// const int VOLUME_HEIGHT = 71;  // lat
+const int VOLUME_HEIGHT = 121;  // lat
 const int VOLUME_DEPTH  = 42;  // lev
 
-const float DLON = 60.0f / VOLUME_WIDTH;  // 60 for current trimmed data set range
-const float DLAT = 35.0f / VOLUME_HEIGHT;  // 35 for current trimmed data set range
+const float DLON = 35.0f / VOLUME_WIDTH;  // 35 for current trimmed data set range
+const float DLAT = 60.0f / VOLUME_HEIGHT;  // 60 for current trimmed data set range
 const float DLEV = 1000.0f / VOLUME_DEPTH;  // 1000 from max pressure (hPa) but not sure here
 
 const float MIN_TEMP = 210.0f;
