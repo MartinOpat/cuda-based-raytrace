@@ -61,7 +61,7 @@ Widget::Widget(GLFWwindow* window) :
   bgColor(Color3::init(0.1f, 0.1f, 0.1f)),
   date(301),
   samplesPerPixel(1),
-  alphaAcumLimit(0.01f),
+  alphaAcumLimit(0.3f),
   opacityConst(53),
   showSilhouettes(false),
   silhouettesThreshold(0.02f)
@@ -76,7 +76,7 @@ Widget::Widget(GLFWwindow* window) :
 
   this->fps = (char*)malloc(512*sizeof(char));
   this->dateString = (char*)malloc(512*sizeof(char));
-  sprintf(this->dateString, "January 1st");
+  parseDate(this->dateString, this->date);
 
   resetCamera();
   resetLight();
@@ -202,14 +202,11 @@ void Widget::resetCamera() {
   this->yaw = -4.825;
   this->roll = -0.0;
   this->cameraDir = Vec3::getDirectionFromEuler(pitch, yaw, roll);
-
-  // Vec3 h_center = Vec3::init((float)VOLUME_WIDTH/2.0f, (float)VOLUME_HEIGHT/2.0f, (float)VOLUME_DEPTH/2.0f);
-  // this->cameraDir = (h_center - this->cameraPos).normalize();
 }
 
 
 void Widget::resetLight() {
-  this->lightPos = Point3::init(1.5, 2.0, -1.0);
+  this->lightPos = Point3::init(72.5, 24.5, 79.5);
 }
 
 void Widget::copyToDevice() {
