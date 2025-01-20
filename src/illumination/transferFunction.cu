@@ -134,8 +134,8 @@ __device__ float4 transferFunction(float density, const Vec3& grad, const Point3
     result.x = 0.0f;
     result.y = 0.0f;
     result.z = 0.0f;
-    // result.w = alpha;
-    result.w = d_opacityConst;
+    result.w = alpha;
+    // result.w = d_opacityConst;
   }
 
   return result;

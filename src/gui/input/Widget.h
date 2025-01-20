@@ -34,6 +34,8 @@ public:
   float silhouettesThreshold;
   float levoyFocus;
   float levoyWidth;
+  float specularStrength;
+  int shininess;
 
   ImGuiIO io;
 

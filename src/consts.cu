@@ -48,6 +48,8 @@ __device__ Vec3 d_cameraDir;
 __device__ Point3 d_lightPos;
 __device__ Color3 d_backgroundColor;
 __device__ Vec3 d_cameraUp;
+__device__ double d_specularStrength;
+__device__ int d_shininess;
 
 Vec3 h_cameraUp = Vec3::init(0.0, 1.0, 0.0).normalize();
 

@@ -51,6 +51,8 @@ Widget::Widget(GLFWwindow* window) {
   this->silhouettesThreshold = 0.02f;
   this->levoyFocus = 0.5;
   this->levoyWidth = 1;
+  this->specularStrength = 0.5;
+  this->shininess = 32;
 };
 
 // REFACTOR: should probably not have all the logic in one function; something like a list of ImplementedWidgets with each a Render() function (a la interface) would be better.
@@ -71,6 +73,8 @@ void Widget::tick(double fps) {
   float min = -1, max = 1;
 
   ImGui::Begin("Transfer Function Controls");
+  ImGui::DragFloat("Specular Strength", &this->specularStrength, 0.01f, 0.0f, 1.0f, "%.2f");
+  ImGui::DragInt("Shininess", &this->shininess, 1, 1, 64, "%d", ImGuiSliderFlags_AlwaysClamp);
   ImGui::DragInt("Grad. exp. (log [1e-10, 1])", &this->opacityK, 1, 0, 100, "%d%%", ImGuiSliderFlags_AlwaysClamp);
   ImGui::DragFloat("Sig. shift", &this->sigmoidShift, 0.01f, 0.0f, 1.0f, "%.2f");
   ImGui::InputFloat("Sig. sxp", &this->sigmoidExp, 10.0f, 100.0f, "%.0f");
@@ -181,6 +185,9 @@ void Widget::copyToDevice() {
   cudaMemcpyToSymbol(&d_silhouettesThreshold, &this->silhouettesThreshold, sizeof(float));
   cudaMemcpyToSymbol(&d_levoyFocus, &this->levoyFocus, sizeof(float));
   cudaMemcpyToSymbol(&d_levoyWidth, &this->levoyWidth, sizeof(float));
+  double specularStrengthDouble = this->specularStrength;
+  cudaMemcpyToSymbol(&d_specularStrength, &specularStrengthDouble, sizeof(double));
+  cudaMemcpyToSymbol(&d_shininess, &this->shininess, sizeof(int));
 
   this->opacityConstReal = std::pow(10.0f, (-5 + 0.05 * this->opacityConst));
   cudaMemcpyToSymbol(&d_opacityConst, &this->opacityConstReal, sizeof(float));

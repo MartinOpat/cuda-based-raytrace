@@ -41,8 +41,8 @@ const float stepSize = 0.02f;
 // Shading consts
 const double ambientStrength  = 0.3;
 const double diffuseStrength  = 0.8;
-const double specularStrength = 0.5;
-const int shininess           = 32;
+extern __device__ double d_specularStrength; // = 0.5;
+extern __device__ int d_shininess; //           = 32;
 const float fov             = 60.0f * (M_PI / 180.0f);
 
 // Camera and Light
