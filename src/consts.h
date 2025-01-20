@@ -5,8 +5,8 @@
 #include <cmath>
 
 // --------------------------- Basic Constants ---------------------------
-const int INITIAL_WINDOW_WIDTH   = 800;
-const int INITIAL_WINDOW_HEIGHT  = 600;
+const int INITIAL_WINDOW_WIDTH   = 1920;
+const int INITIAL_WINDOW_HEIGHT  = 1080;
 
 const double epsilon = 1e-10f;
 const double infty   = 1e15f;  // This value is used to represent missing values in data
@@ -34,7 +34,7 @@ const float MAX_SPEED = 14.0f;
 // --------------------------- Raycasting Constants ---------------------------
 const float minAllowedDensity = 0.001f;
 
-const float stepSize = 0.02f;
+const float stepSize = 0.002;
 
 
 // --------------------------- Illumination Constants ---------------------------

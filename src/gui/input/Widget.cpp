@@ -58,6 +58,7 @@ Widget::Widget(GLFWwindow* window) :
   dateChanged(false),
   paused(true),
   renderOnce(false),
+  saveImage(false),
   bgColor(Color3::init(0.1f, 0.1f, 0.1f)),
   date(301),
   samplesPerPixel(1),
@@ -171,6 +172,7 @@ void Widget::tick(double fps) {
   ImGui::SameLine();
   ImGui::Text(this->dateString);
   ImGui::DragInt("Samples per pixel", &this->samplesPerPixel, 1, 1, 16, "%d", ImGuiSliderFlags_AlwaysClamp);
+  if (ImGui::Button("Save render")) this->saveImage = true;
   ImGui::End();
 
 

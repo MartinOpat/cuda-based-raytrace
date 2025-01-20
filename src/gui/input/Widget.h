@@ -12,6 +12,7 @@ class Widget {
 public:
   bool paused;
   bool dateChanged;
+  bool saveImage;
   int date;
 
   void tick(double fps);

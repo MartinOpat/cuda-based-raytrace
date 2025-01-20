@@ -22,6 +22,7 @@ public:
   int init(float* data);
   void free(float* data);
   void resize(unsigned int w, unsigned int h);
+  void saveImage();
 
 private:
   GLFWwindow* window;

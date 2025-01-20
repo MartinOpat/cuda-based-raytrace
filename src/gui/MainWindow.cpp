@@ -10,6 +10,21 @@
 #include "cuda_error.h"
 
 
+void Window::saveImage() {
+  unsigned char* pixels = new unsigned char[this->w * this->h * 3];
+  glReadPixels(0, 0, this->w, this->h, GL_RGB, GL_UNSIGNED_BYTE, pixels);
+  const char* filename = "output.ppm"; // TODO: make this the current time
+
+  std::ofstream imageFile(filename, std::ios::out | std::ios::binary);
+  imageFile << "P6\n" << this->w << " " << this->h << "\n255\n";
+  for (int i = 0; i < this->w * this->h * 3; i++) {
+      imageFile << pixels[i];
+  }
+  imageFile.close();
+
+  delete[] pixels;
+}
+
 Window::Window(unsigned int w, unsigned int h) {
   this->w = w;
   this->h = h;
@@ -110,6 +125,10 @@ void Window::tick() {
   if (this->widget->dateChanged) {
     // TODO: Load new date file here
     this->widget->dateChanged = false;
+  }
+  if (this->widget->saveImage) {
+    saveImage();
+    this->widget->saveImage = false;
   }
   
   // tick render
