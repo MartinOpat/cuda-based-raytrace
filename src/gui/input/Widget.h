@@ -32,6 +32,8 @@ public:
   float opacityConstReal;
   bool showSilhouettes;
   float silhouettesThreshold;
+  float levoyFocus;
+  float levoyWidth;
 
   ImGuiIO io;
 

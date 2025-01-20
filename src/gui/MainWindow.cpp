@@ -92,7 +92,6 @@ void Window::free(float* data) {
 
 
 void Window::tick() {
-  std::cout << "tick tick\n";
   // manually track time diff
 	std::chrono::steady_clock::time_point now = std::chrono::steady_clock::now();
   float diff = (float) std::chrono::duration_cast<std::chrono::milliseconds>(now - this->last_frame).count();
@@ -101,12 +100,10 @@ void Window::tick() {
   // input
   this->widget->tick(1000.0/diff);
   
-  std::cout << "setting tick render\n";
   // tick render
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 	glDisable(GL_DEPTH_TEST);
 
-  std::cout << "blabla\n";
   if (!this->widget->paused) this->quad->render();
   this->shader->use();
 	glBindVertexArray(this->quad->VAO);
@@ -114,14 +111,11 @@ void Window::tick() {
 	glDrawArrays(GL_TRIANGLES, 0, 6); // draw current frame to texture
   
   // render ImGui context
-  std::cout << "rendering\n";
   this->widget->render();
-  std::cout << "done rendering\n";
 
   // check for events
 	glfwSwapBuffers(this->window);
 	glfwPollEvents();
-  std::cout << "done tick tick\n";
 
 }
 

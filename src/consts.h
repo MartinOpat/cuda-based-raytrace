@@ -78,11 +78,14 @@ extern __device__ int d_samplesPerPixel;
 // Silhouettes
 extern __device__ bool d_showSilhouettes;
 extern __device__ float d_silhouettesThreshold;
+// controlling levoy opacity function
+extern __device__ float d_levoyFocus;
+extern __device__ float d_levoyWidth;
 
-const int lenStopsPythonLike = 11;
+const int lenStopsPythonLike = 5;
 const int lenStopsGrayscale = 2;
 const int lenStopsBluePurpleRed = 3;
-extern __constant__ ColorStop d_stopsPythonLike[11];
+extern __constant__ ColorStop d_stopsPythonLike[5];
 extern __constant__ ColorStop d_stopsGrayscale[2];
 extern __constant__ ColorStop d_stopsBluePurleRed[3];
 
