@@ -29,7 +29,7 @@ include_directories(${CMAKE_SOURCE_DIR}/include/imgui)
 add_executable(${PROJECT_NAME} ${HEADER_FILES} ${SOURCE_FILES} ${IMGUI_FILES})
 
 # CUDA has specific architectures - set it to the system's architecture if available (or 70 by default)
-set_target_properties(${PROJECT_NAME} PROPERTIES CUDA_ARCHITECTURES 70)
+set_target_properties(${PROJECT_NAME} PROPERTIES CUDA_ARCHITECTURES 52)
 set_target_properties(${PROJECT_NAME}
    PROPERTIES
        CUDA_SEPARABLE_COMPILATION ON
@@ -60,7 +60,7 @@ include_directories("${CUDA_INCLUDE_DIRS}")
 
 # netcdf
 find_package(netCDF REQUIRED)
-message(STATUS "Found netcdf in ${NETCDF_INCLUDE_DIR}")
+message(STATUS "Found netcdf in ${NETCDF_LIB}")
 
 execute_process(
     COMMAND nc-config --includedir
@@ -74,9 +74,16 @@ execute_process(
     OUTPUT_STRIP_TRAILING_WHITESPACE
 )
 
+execute_process(
+    COMMAND ncxx4-config --prefix
+    OUTPUT_VARIABLE NETCDFCXX_PREFIX_DIR
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+)
+
 target_include_directories(cuda-raytracer PUBLIC ${netCDF_INCLUDE_DIR})
 
-find_library(NETCDF_LIB NAMES netcdf-cxx4 netcdf_c++4 PATHS ${NETCDFCXX_LIB_DIR} NO_DEFAULT_PATH)
+find_library(NETCDF_LIB NAMES netcdf-cxx4 netcdf_c++4 PATHS ${NETCDFCXX_LIB_DIR} ${NETCDFCXX_PREFIX_DIR}/lib NO_DEFAULT_PATH)
+message(STATUS "Found NetCDFCXX in ${NETCDF_LIB}")
 
 set(LIBS ${GLFW3_LIBRARY} ${OPENGL_LIBRARY} GLAD ${CMAKE_DL_LIBS} ${CUDA_LIBRARIES} ${NETCDF_LIB})
 

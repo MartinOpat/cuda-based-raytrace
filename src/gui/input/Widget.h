@@ -24,6 +24,8 @@ private:
   // camera controls
   Point3 cameraDir;
   Vec3 cameraPos;
+  double pitch, yaw, roll;
+  Vec3 cameraUp;
 
   // simulation cotnrols
   bool renderOnce;

@@ -21,7 +21,7 @@ static float* d_volume = nullptr;
 // * time controls - arbitrary skipping to specified point (would require some changes to gpubuffer) (could have)
 
 void getTemperature(std::vector<float>& temperatureData, int idx = 0) {
-    std::string path = "data/trimmed";
+    std::string path = "../../../../hurricane-sandy-data/trimmed";
     // std::string path = "data";
     std::string variable = "T";
     DataReader dataReader(path, variable);
@@ -31,7 +31,7 @@ void getTemperature(std::vector<float>& temperatureData, int idx = 0) {
 }
 
 void getSpeed(std::vector<float>& speedData, int idx = 0) {
-    std::string path = "data/trimmed";
+    std::string path = "../../../../hurricane-sandy-data/trimmed";
     // std::string path = "data";
     std::string varU = "U";
     std::string varV = "V";
@@ -55,7 +55,7 @@ void getSpeed(std::vector<float>& speedData, int idx = 0) {
 
 int main() {
   std::vector<float> data;
-  getTemperature(data, 0);
+  getTemperature(data, 7); // 20121028
   // getSpeed(data, 294);
 
   std::cout << "DATA size: " << data.size() << std::endl;
