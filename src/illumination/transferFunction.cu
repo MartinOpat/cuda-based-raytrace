@@ -3,10 +3,29 @@
 
 #include <stdio.h>
 
+// [Levoy 1988]
+__device__ float levoyOpacity(const Vec3 &grad, float val) {
+    float r = d_levoyWidth; // width
+    float fv = d_levoyFocus; // chosen value
+    float epsilon = 1E-8;
+    float gradMag = grad.length();
+    if ((gradMag < epsilon) && ((val - epsilon) <= fv) && (fv <= (val + epsilon))) return 1.0f;
+    if (gradMag < epsilon) return 0.0f;
+    float lowBound = val - r*gradMag;
+    float upperBound = val + r*gradMag;
+    // float lowBound = fv - r;
+    // float upperBound = fv + r;
+    if (!((lowBound <= fv) && (fv <= upperBound))) return 0.0f;
+    // if ((lowBound <= gradMag) && (gradMag <= upperBound)) return 1.0f;
+    // return 0.0f;
 
+    float alpha = d_opacityConst*(1 - (1/r)*fabs((fv-val)/gradMag));
+    return alpha;
+}
 
 __device__ float opacityFromGradient(const Vec3 &grad, const Vec3& rayDir) {
     float gradMag = grad.length();
+    // float gradMag = 1-fabs(grad.normalize().dot(rayDir));
     // float gradMag = grad.length()*(1-fabs(grad.normalize().dot(rayDir)));  // Alternative, but not particularly better
     float alpha = 1.0f - expf(-d_opacityK * gradMag);
     return alpha;
@@ -83,6 +102,10 @@ __device__ float4 transferFunction(float density, const Vec3& grad, const Point3
   case 2:
     alpha = d_opacityConst;
     break;
+
+  case 3:
+    alpha = levoyOpacity(grad, normDensity);
+    break;
   
   default:
     alpha = 1.0f;  // This should not be reached anyway
@@ -111,8 +134,8 @@ __device__ float4 transferFunction(float density, const Vec3& grad, const Point3
     result.x = 0.0f;
     result.y = 0.0f;
     result.z = 0.0f;
-    // result.w = alpha;
-    result.w = d_opacityConst;
+    result.w = alpha;
+    // result.w = d_opacityConst;
   }
 
   return result;

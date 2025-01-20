@@ -98,18 +98,25 @@ void Widget::tick(double fps) {
   
 
   ImGui::Begin("Transfer Function Controls");
+  ImGui::DragFloat("Specular Strength", &this->specularStrength, 0.01f, 0.0f, 1.0f, "%.2f");
+  ImGui::DragInt("Shininess", &this->shininess, 1, 1, 64, "%d", ImGuiSliderFlags_AlwaysClamp);
   ImGui::DragInt("Grad. exp. (log [1e-10, 1])", &this->opacityK, 1, 0, 100, "%d%%", ImGuiSliderFlags_AlwaysClamp);
   ImGui::DragFloat("Sig. shift", &this->sigmoidShift, 0.01f, 0.0f, 1.0f, "%.2f");
   ImGui::InputFloat("Sig. sxp", &this->sigmoidExp, 10.0f, 100.0f, "%.0f");
   ImGui::DragFloat("Alpha accum. limit", &this->alphaAcumLimit, 0.01f, 0.0f, 1.0f, "%.2f");
   ImGui::DragInt("Opacity const. (log [1e-5, 1])", &this->opacityConst, 1, 0, 100, "%d%%", ImGuiSliderFlags_AlwaysClamp);
+  ImGui::DragFloat("Levoy Width", &this->levoyWidth, 0.01f, 0.0f, 100.0f, "%.2f");
+  // ImGui::DragFloat("Levoy Focus", &this->levoyFocus, 0.01f, 250.0f, 350.0f, "%.2f");
+  ImGui::DragFloat("Levoy Focus", &this->levoyFocus, 0.01f, 0.0f, 1.0f, "%.2f");
   
   // the items[] contains the entries for the combobox. The selected index is stored as an int on this->tfComboSelected
   // the default entry is set in the constructor, so if you want that to be a specific entry just change it
   // whatever value is selected here is available on the gpu as d_tfComboSelected.
-  const char* items[] = {"Opacity - gradient", "Opacity - sigmoid", "Opacity - constant", "..."};
+  const char* items[] = {"Opacity - gradient", "Opacity - sigmoid", "Opacity - constant", "Opacity - levoy"};
   if (ImGui::BeginCombo("Transfer function", items[this->tfComboSelected])) {
+    // std::cout << "hello???\n";
     for (int n = 0; n < IM_ARRAYSIZE(items); n++) {
+      // std::cout << "letsssssa a asdfa???\n";
       const bool is_selected = (this->tfComboSelected == n);
       if (ImGui::Selectable(items[n], is_selected))
         this->tfComboSelected = n;
@@ -228,11 +235,17 @@ void Widget::copyToDevice() {
   cudaMemcpyToSymbol(&d_tfComboSelected, &this->tfComboSelected, sizeof(int));
   cudaMemcpyToSymbol(&d_showSilhouettes, &this->showSilhouettes, sizeof(bool));
   cudaMemcpyToSymbol(&d_silhouettesThreshold, &this->silhouettesThreshold, sizeof(float));
+  cudaMemcpyToSymbol(&d_levoyFocus, &this->levoyFocus, sizeof(float));
+  cudaMemcpyToSymbol(&d_levoyWidth, &this->levoyWidth, sizeof(float));
+  double specularStrengthDouble = this->specularStrength;
+  cudaMemcpyToSymbol(&d_specularStrength, &specularStrengthDouble, sizeof(double));
+  cudaMemcpyToSymbol(&d_shininess, &this->shininess, sizeof(int));
 
   this->opacityConstReal = std::pow(10.0f, (-5 + 0.05 * this->opacityConst));
   cudaMemcpyToSymbol(&d_opacityConst, &this->opacityConstReal, sizeof(float));
 
   cudaMemcpyToSymbol(&d_tfComboSelectedColor, &this->tfComboSelectedColor, sizeof(int));
+
 }
 
 Widget::~Widget() {

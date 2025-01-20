@@ -46,6 +46,10 @@ private:
   float opacityConstReal;
   bool showSilhouettes;
   float silhouettesThreshold;
+  float levoyFocus;
+  float levoyWidth;
+  float specularStrength;
+  int shininess;
 
   // miscellaneous
   Point3 lightPos;
