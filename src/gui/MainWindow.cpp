@@ -1,6 +1,7 @@
 #include "MainWindow.h"
 
 #include "cuda_runtime.h"
+#include <csignal>
 #include <iostream>
 #include <memory>
 
@@ -11,6 +12,9 @@
 Window::Window(unsigned int w, unsigned int h) {
   this->w = w;
   this->h = h;
+
+  this->gpuPerf.open("gpuPerformance");
+  this->cpuPerf.open("cpuPerformance");
 }
 
 void framebuffer_size_callback(GLFWwindow* window, int w, int h) {
@@ -87,6 +91,9 @@ void Window::free(float* data) {
 
   glfwDestroyWindow(window);
   glfwTerminate();
+
+  this->gpuPerf.close();
+  this->cpuPerf.close();
 }
 
 
@@ -95,6 +102,7 @@ void Window::tick() {
 	std::chrono::steady_clock::time_point now = std::chrono::steady_clock::now();
   float diff = (float) std::chrono::duration_cast<std::chrono::milliseconds>(now - this->last_frame).count();
   this->last_frame = now;
+  this->cpuPerf << diff << "\n";
 
   // input
   this->widget->tick(1000.0/diff);
@@ -107,7 +115,23 @@ void Window::tick() {
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 	glDisable(GL_DEPTH_TEST);
 
-  if (!this->widget->paused) this->quad->render();
+  if (!this->widget->paused){
+  cudaEvent_t start, stop;
+  cudaEventCreate(&start);
+  cudaEventCreate(&stop);
+  cudaEventRecord(start, 0);
+    this->quad->render();
+
+  cudaEventRecord(stop, 0);
+  cudaEventSynchronize(stop);
+  float t;
+  cudaEventElapsedTime(&t, start, stop);
+  this->gpuPerf << t << "\n";
+
+  cudaEventDestroy(start);
+  cudaEventDestroy(stop);
+  } 
+
   this->shader->use();
 	glBindVertexArray(this->quad->VAO);
 	glBindTexture(GL_TEXTURE_2D, this->quad->tex);

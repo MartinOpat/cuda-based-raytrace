@@ -7,6 +7,8 @@
 #include <GLFW/glfw3.h>
 #include <chrono>
 #include "input/Widget.h"
+#include <fstream>
+#include <iostream>
 
 
 class Window {
@@ -25,6 +27,9 @@ private:
   GLFWwindow* window;
   std::unique_ptr<Quad> quad;
   Widget* widget;
+
+  std::ofstream gpuPerf;
+  std::ofstream cpuPerf;
 
 	std::chrono::steady_clock::time_point last_frame;
 
