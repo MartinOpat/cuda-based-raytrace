@@ -5,8 +5,8 @@
 #include <cmath>
 
 // --------------------------- Basic Constants ---------------------------
-const int INITIAL_WINDOW_WIDTH   = 200;
-const int INITIAL_WINDOW_HEIGHT  = 150;
+const int INITIAL_WINDOW_WIDTH   = 800;
+const int INITIAL_WINDOW_HEIGHT  = 600;
 
 const double epsilon = 1e-10f;
 const double infty   = 1e15f;  // This value is used to represent missing values in data

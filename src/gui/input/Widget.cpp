@@ -51,7 +51,7 @@ void parseDate(char* string, int dayOfYear) {
 }
 
 Widget::Widget(GLFWwindow* window) : 
-  opacityK(0),
+  opacityK(63),
   sigmoidShift(0.5f),
   sigmoidExp(-250.0f),
   tfComboSelected(2),
@@ -59,10 +59,10 @@ Widget::Widget(GLFWwindow* window) :
   paused(true),
   renderOnce(false),
   bgColor(Color3::init(0.1f, 0.1f, 0.1f)),
-  date(0),
+  date(301),
   samplesPerPixel(1),
-  alphaAcumLimit(0.4f),
-  opacityConst(100),
+  alphaAcumLimit(0.01f),
+  opacityConst(53),
   showSilhouettes(false),
   silhouettesThreshold(0.02f)
 {
@@ -73,14 +73,6 @@ Widget::Widget(GLFWwindow* window) :
   ImGui_ImplGlfw_InitForOpenGL(window, true);
   ImGui_ImplOpenGL3_Init();
 
-  this->cameraPos = Point3::init(59.0f, 77.5f, -18.0f);  // Camera for partially trimmed data set
-  this->pitch = 0.7;
-  this->yaw = 4.85;
-  this->roll = -0.010;
-  this->cameraDir = Vec3::getDirectionFromEuler(pitch, yaw, roll);
-
-  this->bgColor = Color3::init(0.1f, 0.1f, 0.1f);
-  this->lightPos = Point3::init(1.5, 2.0, -1.0);
 
   this->fps = (char*)malloc(512*sizeof(char));
   this->dateString = (char*)malloc(512*sizeof(char));
@@ -164,9 +156,8 @@ void Widget::tick(double fps) {
   sprintf(this->fps, "%.3f fps\n", fps);
   ImGui::Text(this->fps);
 
-  // we have data from 2012-01-01 til 2012-09-11 == 255 days
   ImGui::SetNextItemWidth(20.0f * ImGui::GetFontSize()); 
-  if (ImGui::SliderInt("Day of year", &this->date, 1, 255, "%d", ImGuiSliderFlags_NoInput)) {
+  if (ImGui::SliderInt("Day of year", &this->date, 1, 365, "%d", ImGuiSliderFlags_NoInput)) {
     this->dateChanged = true;
     parseDate(this->dateString, this->date);
   }
@@ -206,11 +197,14 @@ void Widget::render() {
 }
 
 void Widget::resetCamera() {
-  this->cameraPos = Point3::init(50.0f, -50.0f, -75.0f);  // Camera for partially trimmed data set
-  // this->cameraPos = Point3::init(300.0f, 200.0f, -700.0f);  // Camera for full data set
-  
-  Vec3 h_center = Vec3::init((float)VOLUME_WIDTH/2.0f, (float)VOLUME_HEIGHT/2.0f, (float)VOLUME_DEPTH/2.0f);
-  this->cameraDir = (h_center - this->cameraPos).normalize();
+  this->cameraPos = Point3::init(69.5f, -19.5f, 59.5f);  // Camera for partially trimmed data set
+  this->pitch = -19.5;
+  this->yaw = -4.825;
+  this->roll = -0.0;
+  this->cameraDir = Vec3::getDirectionFromEuler(pitch, yaw, roll);
+
+  // Vec3 h_center = Vec3::init((float)VOLUME_WIDTH/2.0f, (float)VOLUME_HEIGHT/2.0f, (float)VOLUME_DEPTH/2.0f);
+  // this->cameraDir = (h_center - this->cameraPos).normalize();
 }
 
 
