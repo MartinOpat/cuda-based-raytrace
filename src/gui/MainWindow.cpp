@@ -1,14 +1,71 @@
 #include "MainWindow.h"
 
+#include "hurricanedata/datareader.h"
 #include "cuda_runtime.h"
 #include <csignal>
 #include <iostream>
 #include <memory>
 
+#include <vector>
+#include "consts.h"
 #include "Shader.h"
 #include "input/Widget.h"
 #include "cuda_error.h"
 
+// FIXME: this is the worst code in this project - very ad hoc
+// this is a blocking operation, and really does not follow any practices of code design
+// should really be a proper class like GpuBufferHandler.
+void loadData(float* d_data, const int idx) {
+  std::cout << "hi\n";
+
+  std::vector<float> h_data;
+  std::cout << "hi\n";
+  std::string path = "data/trimmed";
+  std::cout << "hi\n";
+  std::string variable = "T";
+  std::cout << "hi\n";
+
+  DataReader dataReader(path, variable);
+  std::cout << "hi\n";
+
+  size_t dataLength = dataReader.fileLength(idx);
+  std::cout << "hi\n";
+
+  h_data.resize(dataLength);
+  std::cout << "hi\n";
+
+  dataReader.loadFile(h_data.data(), idx);
+  std::cout << "hi\n";
+
+  // getTemperature(h_data, idx); 
+  // getSpeed(h_data, idx); 
+
+  float* hostVolume = new float[VOLUME_WIDTH * VOLUME_HEIGHT * VOLUME_DEPTH];
+  for (int i = 0; i < VOLUME_WIDTH * VOLUME_HEIGHT * VOLUME_DEPTH; i++) {
+    hostVolume[i] = h_data[i + 0*VOLUME_DEPTH*VOLUME_HEIGHT*VOLUME_WIDTH];
+    // Discard missing values
+    if (h_data[i + 0*VOLUME_DEPTH*VOLUME_HEIGHT*VOLUME_WIDTH] + epsilon >= infty) hostVolume[i] = -infty;
+  }
+  std::cout << "hi\n";
+
+  // Reverse the order of hostVolume - why is it upside down anyway?
+  for (int i = 0; i < VOLUME_WIDTH; i++) {
+    for (int j = 0; j < VOLUME_HEIGHT; j++) {
+      for (int k = 0; k < VOLUME_DEPTH/2; k++) {
+        float temp = hostVolume[i + j*VOLUME_WIDTH + k*VOLUME_WIDTH*VOLUME_HEIGHT];
+        hostVolume[i + j*VOLUME_WIDTH + k*VOLUME_WIDTH*VOLUME_HEIGHT] = hostVolume[i + j*VOLUME_WIDTH + (VOLUME_DEPTH - 1 - k)*VOLUME_WIDTH*VOLUME_HEIGHT];
+        hostVolume[i + j*VOLUME_WIDTH + (VOLUME_DEPTH - 1 - k)*VOLUME_WIDTH*VOLUME_HEIGHT] = temp;
+      }
+    }
+  }
+  std::cout << "hi\n";
+
+  // Allocate + copy data to GPU
+  size_t volumeSize = sizeof(float) * VOLUME_WIDTH * VOLUME_HEIGHT * VOLUME_DEPTH;
+  std::cout << "hi\n";
+  cudaMemcpy(d_data, hostVolume, volumeSize, cudaMemcpyHostToDevice);
+  std::cout << "hi\n";
+}
 
 void Window::saveImage() {
   unsigned char* pixels = new unsigned char[this->w * this->h * 3];
@@ -41,6 +98,8 @@ void framebuffer_size_callback(GLFWwindow* window, int w, int h) {
 }
 
 int Window::init(float* data) {
+  this->data = data;
+
   // init glfw
   glfwInit();
   // requesting context version 1.0 makes glfw try to provide the latest version if possible
@@ -124,6 +183,7 @@ void Window::tick() {
   this->widget->tick(1000.0/diff);
   if (this->widget->dateChanged) {
     // TODO: Load new date file here
+    loadData(this->data, this->widget->date);
     this->widget->dateChanged = false;
   }
   if (this->widget->saveImage) {

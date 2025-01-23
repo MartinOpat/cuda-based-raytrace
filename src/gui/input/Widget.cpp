@@ -107,7 +107,6 @@ void Widget::tick(double fps) {
   ImGui::DragFloat("Alpha accum. limit", &this->alphaAcumLimit, 0.01f, 0.0f, 1.0f, "%.2f");
   ImGui::DragInt("Opacity const. (log [1e-5, 1])", &this->opacityConst, 1, 0, 100, "%d%%", ImGuiSliderFlags_AlwaysClamp);
   ImGui::DragFloat("Levoy Width", &this->levoyWidth, 0.01f, 0.0f, 100.0f, "%.2f");
-  // ImGui::DragFloat("Levoy Focus", &this->levoyFocus, 0.01f, 250.0f, 350.0f, "%.2f");
   ImGui::DragFloat("Levoy Focus", &this->levoyFocus, 0.01f, 0.0f, 1.0f, "%.2f");
   
   // the items[] contains the entries for the combobox. The selected index is stored as an int on this->tfComboSelected
@@ -115,9 +114,7 @@ void Widget::tick(double fps) {
   // whatever value is selected here is available on the gpu as d_tfComboSelected.
   const char* items[] = {"Opacity - gradient", "Opacity - sigmoid", "Opacity - constant", "Opacity - levoy"};
   if (ImGui::BeginCombo("Transfer function", items[this->tfComboSelected])) {
-    // std::cout << "hello???\n";
     for (int n = 0; n < IM_ARRAYSIZE(items); n++) {
-      // std::cout << "letsssssa a asdfa???\n";
       const bool is_selected = (this->tfComboSelected == n);
       if (ImGui::Selectable(items[n], is_selected))
         this->tfComboSelected = n;
