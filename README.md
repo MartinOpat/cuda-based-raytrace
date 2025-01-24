@@ -72,11 +72,6 @@ For example, using the date of the file in question is a good way of ensuring th
 
 Once the data is in place, the program may be executed as normal - again make sure to run this on an NVidia GPU.  
 
-<!-- ## Screenshots -->
-
-<!-- TODO: add cool screenshots -->
+## Screenshots
 
 
-<!-- ## Modules -->
-
-<!-- TODO: talk about program design a little -->

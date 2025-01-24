@@ -16,7 +16,7 @@
 // this is a blocking operation, and really does not follow any practices of code design
 // should really be a proper class like GpuBufferHandler.
 // also only loads temperature data
-void loadData(float* d_data, const int idx) {
+void loadData(float* d_data, const int idx, const int timestep) {
 
   std::vector<float> h_data;
   std::string path = "data/trimmed";
@@ -32,7 +32,7 @@ void loadData(float* d_data, const int idx) {
 
   float* hostVolume = new float[VOLUME_WIDTH * VOLUME_HEIGHT * VOLUME_DEPTH];
   for (int i = 0; i < VOLUME_WIDTH * VOLUME_HEIGHT * VOLUME_DEPTH; i++) {
-    hostVolume[i] = h_data[i + 0*VOLUME_DEPTH*VOLUME_HEIGHT*VOLUME_WIDTH];
+    hostVolume[i] = h_data[i + timestep*VOLUME_DEPTH*VOLUME_HEIGHT*VOLUME_WIDTH];
     // Discard missing values
     if (h_data[i + 0*VOLUME_DEPTH*VOLUME_HEIGHT*VOLUME_WIDTH] + epsilon >= infty) hostVolume[i] = -infty;
   }
@@ -170,7 +170,7 @@ void Window::tick() {
   this->widget->tick(1000.0/diff);
   if (this->widget->dateChanged) {
     // TODO: Load new date file here
-    loadData(this->data, this->widget->date);
+    loadData(this->data, this->widget->date, this->widget->timestep);
     this->widget->dateChanged = false;
   }
   if (this->widget->saveImage) {
