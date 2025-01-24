@@ -37,6 +37,8 @@ private:
   void tick();
   int init_quad(float* data);
 
+  int i;
+
   std::unique_ptr<Shader> shader;
 };
 #endif // MAINWINDOW_H

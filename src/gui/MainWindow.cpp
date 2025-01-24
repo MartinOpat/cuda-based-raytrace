@@ -57,9 +57,11 @@ void loadData(float* d_data, const int idx, const int timestep) {
 void Window::saveImage() {
   unsigned char* pixels = new unsigned char[this->w * this->h * 3];
   glReadPixels(0, 0, this->w, this->h, GL_RGB, GL_UNSIGNED_BYTE, pixels);
-  const char* filename = "output.ppm"; // TODO: make this the current time
 
-  std::ofstream imageFile(filename, std::ios::out | std::ios::binary);
+  char str[512];
+  sprintf(str, "output%d.ppm", this->i++);
+
+  std::ofstream imageFile(str, std::ios::out | std::ios::binary);
   imageFile << "P6\n" << this->w << " " << this->h << "\n255\n";
   for (int i = 0; i < this->w * this->h * 3; i++) {
       imageFile << pixels[i];
@@ -86,6 +88,7 @@ void framebuffer_size_callback(GLFWwindow* window, int w, int h) {
 
 int Window::init(float* data) {
   this->data = data;
+  this->i = 0;
 
   // init glfw
   glfwInit();
