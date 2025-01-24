@@ -4,9 +4,7 @@
 
   <p align="center">
     This project implements a raycaster on nvidia GPUs, visualizing wind patterns through the use of silhouette shading
-  </p>
-
-## Table of Contents
+  </p> ## Table of Contents
 
 * [About the Project](#about) 
 * [Dependencies](#dependencies)
@@ -55,17 +53,30 @@ make
 Make sure the program is executed on the nvidia GPU, or it will crash on startup.
 For example, on Arch the command `prime-run ./cuda-raytracer` would make sure the program utilizes the GPU.
 
-
 ## Running
 
-TODO: this section
+### A note on data loading
+
+In order to run properly, the program expects to find a number of `.nc4` files in a directory relative to the executable. Specifically, the data should consist of a number of `.nc4` files from the MERRA2 dataset, located in the `./data/trimmed/` folder.
+For best results - that is, to ensure no crashes during runtime - this folder should contain a full year of data. 
+The program loads a specific data file based on index, meaning the files should be named in alphabetical order.
+
+For example, using the date of the file in question is a good way of ensuring this:
+ * MERRA2_400.inst6_3d_ana_Np.20120101.nc4
+ * MERRA2_400.inst6_3d_ana_Np.20120102.nc4
+ * MERRA2_400.inst6_3d_ana_Np.20120103.nc4
+ * MERRA2_400.inst6_3d_ana_Np.20120104.nc4
 
 
-## Screenshots
+### Actual execution
 
-TODO: add cool screenshots
+Once the data is in place, the program may be executed as normal - again make sure to run this on an NVidia GPU.  
+
+<!-- ## Screenshots -->
+
+<!-- TODO: add cool screenshots -->
 
 
-## Modules
+<!-- ## Modules -->
 
-TODO: talk about program design a little
+<!-- TODO: talk about program design a little -->
