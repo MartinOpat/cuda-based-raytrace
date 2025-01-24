@@ -125,18 +125,18 @@ int Window::init(float* data) {
   this->widget = new Widget(this->window);
 
   // loop function for draw calls etc.
-  for (int i=296; i <= 306; i++) {
-    this->widget->date = i;
-    for (int j=0; j < 4; j++) {
-      Window::tick();
-      this->saveImage();
-      this->widget->timestep = j;
-      this->widget->datechanged = true;
-    }
-  }
-  // while (!glfwWindowShouldClose(window)) {
-    // Window::tick();
+  // for (int i=296; i <= 306; i++) {
+  //   this->widget->date = i;
+  //   for (int j=0; j < 4; j++) {
+  //     this->widget->timestep = j;
+  //     Window::tick();
+  //     this->saveImage();
+  //     this->widget->dateChanged = true;
+  //   }
   // }
+  while (!glfwWindowShouldClose(window)) {
+    Window::tick();
+  }
 
   Window::free(data);
   return 0;

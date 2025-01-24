@@ -74,4 +74,8 @@ Once the data is in place, the program may be executed as normal - again make su
 
 ## Screenshots
 
+Temperature of hurricane Sandy visualized using the raycaster over time:
+
+![alt-text](figures/hurricane_flipped.gif)
+
 

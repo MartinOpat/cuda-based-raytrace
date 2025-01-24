@@ -64,7 +64,7 @@ Widget::Widget(GLFWwindow* window) :
   date(301),
   samplesPerPixel(1),
   alphaAcumLimit(0.3f),
-  opacityConst(53),
+  opacityConst(35),
   showSilhouettes(false),
   silhouettesThreshold(0.02f)
 {
