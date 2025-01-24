@@ -169,7 +169,9 @@ void Widget::tick(double fps) {
   }
   ImGui::SameLine();
   ImGui::Text(this->dateString);
-  ImGui::DragInt("time step to load", &this->timestep, 1, 0, 3, "%d", ImGuiSliderFlags_AlwaysClamp);
+  if (ImGui::DragInt("time step to load", &this->timestep, 1, 0, 3, "%d", ImGuiSliderFlags_AlwaysClamp)) {
+    this->dateChanged = true;
+  }
   ImGui::DragInt("Samples per pixel", &this->samplesPerPixel, 1, 1, 16, "%d", ImGuiSliderFlags_AlwaysClamp);
   if (ImGui::Button("Save render")) this->saveImage = true;
   ImGui::End();

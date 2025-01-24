@@ -14,6 +14,7 @@ public:
   bool dateChanged;
   bool saveImage;
   int date;
+  int timestep;
 
   void tick(double fps);
   void render();
@@ -34,7 +35,6 @@ private:
   ImGuiIO io;
   char *dateString;
   int samplesPerPixel;
-  int timestep;
 
   // transfer function controls
   int tfComboSelected;

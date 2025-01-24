@@ -34,7 +34,7 @@ void loadData(float* d_data, const int idx, const int timestep) {
   for (int i = 0; i < VOLUME_WIDTH * VOLUME_HEIGHT * VOLUME_DEPTH; i++) {
     hostVolume[i] = h_data[i + timestep*VOLUME_DEPTH*VOLUME_HEIGHT*VOLUME_WIDTH];
     // Discard missing values
-    if (h_data[i + 0*VOLUME_DEPTH*VOLUME_HEIGHT*VOLUME_WIDTH] + epsilon >= infty) hostVolume[i] = -infty;
+    if (h_data[i + timestep*VOLUME_DEPTH*VOLUME_HEIGHT*VOLUME_WIDTH] + epsilon >= infty) hostVolume[i] = -infty;
   }
   std::cout << "hi\n";
 
