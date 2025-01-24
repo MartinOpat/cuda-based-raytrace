@@ -162,7 +162,7 @@ void Widget::tick(double fps) {
   ImGui::Text(this->fps);
 
   ImGui::SetNextItemWidth(20.0f * ImGui::GetFontSize()); 
-  if (ImGui::SliderInt("Day of year", &this->date, 1, 365, "%d", ImGuiSliderFlags_NoInput)) {
+  if (ImGui::DragInt("Day of year", &this->date, 1, 1, 365, "%d")) {
     this->dateChanged = true;
     parseDate(this->dateString, this->date);
   }
