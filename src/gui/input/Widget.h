@@ -34,6 +34,7 @@ private:
   ImGuiIO io;
   char *dateString;
   int samplesPerPixel;
+  int timestep;
 
   // transfer function controls
   int tfComboSelected;

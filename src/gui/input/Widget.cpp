@@ -51,6 +51,7 @@ void parseDate(char* string, int dayOfYear) {
 }
 
 Widget::Widget(GLFWwindow* window) : 
+  timestep(0),
   opacityK(63),
   sigmoidShift(0.5f),
   sigmoidExp(-250.0f),
@@ -168,6 +169,7 @@ void Widget::tick(double fps) {
   }
   ImGui::SameLine();
   ImGui::Text(this->dateString);
+  ImGui::DragInt("time step to load", &this->timestep, 1, 0, 3, "%d", ImGuiSliderFlags_AlwaysClamp);
   ImGui::DragInt("Samples per pixel", &this->samplesPerPixel, 1, 1, 16, "%d", ImGuiSliderFlags_AlwaysClamp);
   if (ImGui::Button("Save render")) this->saveImage = true;
   ImGui::End();
