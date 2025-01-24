@@ -34,7 +34,7 @@ const float MAX_SPEED = 14.0f;
 // --------------------------- Raycasting Constants ---------------------------
 const float minAllowedDensity = 0.001f;
 
-const float stepSize = 0.002;
+const float stepSize = 0.2;
 
 
 // --------------------------- Illumination Constants ---------------------------

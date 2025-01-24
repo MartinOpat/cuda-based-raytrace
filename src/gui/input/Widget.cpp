@@ -203,10 +203,10 @@ void Widget::render() {
 }
 
 void Widget::resetCamera() {
-  this->cameraPos = Point3::init(69.5f, -19.5f, 59.5f);  // Camera for partially trimmed data set
-  this->pitch = -19.5;
-  this->yaw = -4.825;
-  this->roll = -0.0;
+  this->cameraPos = Point3::init(62.5f, 145.5f, -71.0f);  // Camera for partially trimmed data set
+  this->pitch = -18.165f;
+  this->yaw = -1.605f;
+  this->roll = -0.0f;
   this->cameraDir = Vec3::getDirectionFromEuler(pitch, yaw, roll);
 }
 
