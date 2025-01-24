@@ -15,30 +15,20 @@
 // FIXME: this is the worst code in this project - very ad hoc
 // this is a blocking operation, and really does not follow any practices of code design
 // should really be a proper class like GpuBufferHandler.
+// also only loads temperature data
 void loadData(float* d_data, const int idx) {
-  std::cout << "hi\n";
 
   std::vector<float> h_data;
-  std::cout << "hi\n";
   std::string path = "data/trimmed";
-  std::cout << "hi\n";
   std::string variable = "T";
-  std::cout << "hi\n";
 
   DataReader dataReader(path, variable);
-  std::cout << "hi\n";
 
   size_t dataLength = dataReader.fileLength(idx);
-  std::cout << "hi\n";
 
   h_data.resize(dataLength);
-  std::cout << "hi\n";
 
   dataReader.loadFile(h_data.data(), idx);
-  std::cout << "hi\n";
-
-  // getTemperature(h_data, idx); 
-  // getSpeed(h_data, idx); 
 
   float* hostVolume = new float[VOLUME_WIDTH * VOLUME_HEIGHT * VOLUME_DEPTH];
   for (int i = 0; i < VOLUME_WIDTH * VOLUME_HEIGHT * VOLUME_DEPTH; i++) {
@@ -58,13 +48,10 @@ void loadData(float* d_data, const int idx) {
       }
     }
   }
-  std::cout << "hi\n";
 
   // Allocate + copy data to GPU
   size_t volumeSize = sizeof(float) * VOLUME_WIDTH * VOLUME_HEIGHT * VOLUME_DEPTH;
-  std::cout << "hi\n";
   cudaMemcpy(d_data, hostVolume, volumeSize, cudaMemcpyHostToDevice);
-  std::cout << "hi\n";
 }
 
 void Window::saveImage() {
