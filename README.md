@@ -78,4 +78,6 @@ Temperature of hurricane Sandy visualized using the raycaster over time:
 
 ![alt-text](figures/hurricane_flipped.gif)
 
+Note: We figured this out only after the presentation on 24 Jan 2025.
+
 
